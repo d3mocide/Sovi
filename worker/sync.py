@@ -116,14 +116,16 @@ async def _write_balance_snapshot(
     user_id: str,
     account_id: str,
     sfin_account: dict,
-) -> bool:
+) -> tuple[bool, Decimal | None, Decimal | None]:
     """
     Write a balance snapshot only if the balance has changed from the last one.
-    Returns True if a snapshot was written.
+    Returns (wrote, old_balance, new_balance).
+    old_balance is None if there was no prior snapshot.
+    new_balance is None if sfin_account has no balance field.
     """
     balance_raw = sfin_account.get("balance")
     if balance_raw is None:
-        return False
+        return False, None, None
 
     new_balance = Decimal(str(balance_raw))
 
@@ -146,10 +148,11 @@ async def _write_balance_snapshot(
         account_id,
     )
 
+    old_balance: Decimal | None = None
     if last_row is not None:
-        last_balance = Decimal(str(last_row["balance"]))
-        if abs(new_balance - last_balance) <= _BALANCE_EPSILON:
-            return False
+        old_balance = Decimal(str(last_row["balance"]))
+        if abs(new_balance - old_balance) <= _BALANCE_EPSILON:
+            return False, old_balance, new_balance
 
     await db.execute(
         """
@@ -162,7 +165,7 @@ async def _write_balance_snapshot(
         available_balance,
         balance_date,
     )
-    return True
+    return True, old_balance, new_balance
 
 
 async def _upsert_transactions(
@@ -273,6 +276,8 @@ async def _sync_user_with_conn(db: asyncpg.Connection, user_id: str) -> dict:
     accounts_processed = 0
     transactions_new = 0
     snapshots_written = 0
+    balance_changes: list[dict] = []
+    had_payment = False  # heuristic: at least one debt balance decreased
 
     for sfin_account in sfin_accounts:
         # 4. Upsert account
@@ -290,9 +295,21 @@ async def _sync_user_with_conn(db: asyncpg.Connection, user_id: str) -> dict:
 
         # 5. Write balance snapshot (deduplicated)
         try:
-            wrote = await _write_balance_snapshot(db, user_id, account_id, sfin_account)
+            wrote, old_bal, new_bal = await _write_balance_snapshot(db, user_id, account_id, sfin_account)
             if wrote:
                 snapshots_written += 1
+            if new_bal is not None:
+                # Track balance changes for milestone evaluation (use old_bal if available,
+                # otherwise treat as unchanged so we don't false-fire milestones on first sync)
+                effective_old = old_bal if old_bal is not None else new_bal
+                balance_changes.append({
+                    "account_id": str(account_id),
+                    "name": sfin_account.get("name", "Unknown"),
+                    "old_balance": effective_old,
+                    "new_balance": new_bal,
+                })
+                if account_type in ("credit_card", "loan") and old_bal is not None and new_bal < old_bal:
+                    had_payment = True
         except Exception:
             logger.exception(
                 "sync_user user_id=%s: failed to write balance snapshot account_id=%s",
@@ -336,6 +353,39 @@ async def _sync_user_with_conn(db: asyncpg.Connection, user_id: str) -> dict:
         "UPDATE simplefin_credentials SET last_sync_at=now() WHERE user_id=$1",
         user_id,
     )
+
+    # 8. Evaluate milestones and streaks server-side
+    try:
+        from worker.milestones import evaluate_milestones, evaluate_streaks
+        new_milestones = await evaluate_milestones(
+            db, user_id, {"balance_changes": balance_changes}
+        )
+        if new_milestones:
+            logger.info(
+                "sync_user user_id=%s: awarded %d milestone(s): %s",
+                user_id,
+                len(new_milestones),
+                new_milestones,
+            )
+        # on_time heuristic: at least one debt payment was observed
+        # overpayment heuristic: check if user has an extra_monthly > 0 in their active scenario
+        scenario_row = await db.fetchrow(
+            "SELECT extra_monthly FROM scenarios WHERE user_id=$1 ORDER BY created_at DESC LIMIT 1",
+            user_id,
+        )
+        extra_monthly = (
+            Decimal(str(scenario_row["extra_monthly"])) if scenario_row else Decimal("0")
+        )
+        await evaluate_streaks(
+            db,
+            user_id,
+            on_time=had_payment,
+            overpayment=(extra_monthly > 0),
+        )
+    except Exception:
+        logger.exception(
+            "sync_user user_id=%s: error evaluating milestones/streaks", user_id
+        )
 
     result = {
         "accounts": accounts_processed,

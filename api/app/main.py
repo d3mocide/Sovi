@@ -20,6 +20,9 @@ from app.routers import debt as debt_router
 from app.routers import simulate as simulate_router
 from app.routers import categories as categories_router
 from app.routers import transactions as transactions_router
+from app.routers import gamification as gamification_router
+from app.routers import dashboard as dashboard_router
+from app.routers import scenarios as scenarios_router
 
 
 @asynccontextmanager
@@ -72,3 +75,6 @@ app.include_router(debt_router.router)
 app.include_router(simulate_router.router)
 app.include_router(categories_router.router)
 app.include_router(transactions_router.router, prefix="/transactions")
+app.include_router(gamification_router.router)
+app.include_router(dashboard_router.router)
+app.include_router(scenarios_router.router)
