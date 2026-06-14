@@ -46,6 +46,8 @@ class AccountResponse(BaseModel):
     latest_balance: Decimal | None
     balance_date: datetime | None
     needs_update: bool = False  # True for manual accounts with no balance snapshot in last 30 days
+    needs_classification: bool = False  # True if type=='other' and came from SimpleFIN
+    has_debt_metadata: bool = False  # True if a debt_metadata row exists for this account
 
 
 class UpdateAccountRequest(BaseModel):

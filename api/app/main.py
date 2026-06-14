@@ -16,6 +16,7 @@ from app.routers import health
 from app.routers import auth as auth_router
 from app.routers import simplefin as simplefin_router
 from app.routers import accounts as accounts_router
+from app.routers import debt as debt_router
 
 
 @asynccontextmanager
@@ -64,3 +65,4 @@ app.include_router(health.router)
 app.include_router(auth_router.router, prefix="/auth")
 app.include_router(simplefin_router.router, prefix="/simplefin")
 app.include_router(accounts_router.router, prefix="/accounts")
+app.include_router(debt_router.router)

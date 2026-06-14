@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 from typing import Annotated
 
 import asyncpg
@@ -92,9 +93,11 @@ async def list_accounts(
             a.currency,
             a.is_manual,
             a.credit_limit,
+            a.sfin_account_id,
             bs.balance        AS latest_balance,
             bs.balance_date,
-            bs.captured_at    AS latest_snapshot_at
+            bs.captured_at    AS latest_snapshot_at,
+            EXISTS(SELECT 1 FROM debt_metadata WHERE account_id = a.id) AS has_debt_metadata
         FROM accounts a
         LEFT JOIN LATERAL (
             SELECT balance, balance_date, captured_at
@@ -127,9 +130,85 @@ async def list_accounts(
                     or row["latest_snapshot_at"] if row["latest_snapshot_at"].tzinfo else row["latest_snapshot_at"].replace(tzinfo=timezone.utc) < stale_cutoff
                 )
             ),
+            needs_classification=(
+                row["type"] == "other" and row["sfin_account_id"] is not None
+            ),
+            has_debt_metadata=row["has_debt_metadata"],
         )
         for row in rows
     ]
+
+
+@router.get("/{account_id}", response_model=AccountResponse)
+async def get_account(
+    account_id: str,
+    db: Annotated[asyncpg.Connection, Depends(get_db)],
+    user: Annotated[dict, Depends(get_current_user)],
+) -> AccountResponse:
+    """
+    Single account detail including latest balance snapshot, needs_classification,
+    has_debt_metadata.
+    """
+    user_id = str(user["id"])
+
+    result = await db.fetchrow(
+        """
+        SELECT
+            a.id,
+            a.name,
+            a.type,
+            a.currency,
+            a.is_manual,
+            a.credit_limit,
+            a.sfin_account_id,
+            bs.balance        AS latest_balance,
+            bs.balance_date,
+            bs.captured_at    AS latest_snapshot_at,
+            EXISTS(SELECT 1 FROM debt_metadata WHERE account_id = a.id) AS has_debt_metadata
+        FROM accounts a
+        LEFT JOIN LATERAL (
+            SELECT balance, balance_date, captured_at
+            FROM balance_snapshots
+            WHERE account_id = a.id
+            ORDER BY captured_at DESC
+            LIMIT 1
+        ) bs ON TRUE
+        WHERE a.id = $1 AND a.user_id = $2
+          AND (a.archived IS NULL OR a.archived = FALSE)
+        """,
+        account_id,
+        user_id,
+    )
+
+    if result is None:
+        raise HTTPException(status_code=404, detail="Account not found")
+
+    stale_cutoff = datetime.now(tz=timezone.utc) - timedelta(days=_STALE_MANUAL_DAYS)
+
+    return AccountResponse(
+        id=str(result["id"]),
+        name=result["name"],
+        type=result["type"],
+        currency=result["currency"],
+        is_manual=result["is_manual"],
+        credit_limit=result["credit_limit"],
+        latest_balance=result["latest_balance"],
+        balance_date=result["balance_date"],
+        needs_update=(
+            result["is_manual"]
+            and (
+                result["latest_snapshot_at"] is None
+                or (
+                    (result["latest_snapshot_at"] if result["latest_snapshot_at"].tzinfo else result["latest_snapshot_at"].replace(tzinfo=timezone.utc))
+                    < stale_cutoff
+                )
+            )
+        ),
+        needs_classification=(
+            result["type"] == "other" and result["sfin_account_id"] is not None
+        ),
+        has_debt_metadata=result["has_debt_metadata"],
+    )
 
 
 @router.put("/{account_id}", response_model=AccountResponse)
@@ -142,12 +221,16 @@ async def update_account(
     """
     Update account metadata (name, type, credit_limit, archived).
     User ownership is strictly enforced — fail closed.
+
+    When type is set to 'credit_card' and credit_limit is not already set,
+    attempts to derive credit_limit from the latest balance snapshot:
+    credit_limit = balance + available_balance.
     """
     user_id = str(user["id"])
 
     # Fetch the account, enforcing user_id filter
     existing = await db.fetchrow(
-        "SELECT id FROM accounts WHERE id=$1 AND user_id=$2",
+        "SELECT id, type, credit_limit FROM accounts WHERE id=$1 AND user_id=$2",
         account_id,
         user_id,
     )
@@ -164,6 +247,29 @@ async def update_account(
         updates["credit_limit"] = body.credit_limit
     if body.archived is not None:
         updates["archived"] = body.archived
+
+    # Derive credit_limit when classifying as credit_card and no limit is set/provided
+    if (
+        body.type == "credit_card"
+        and body.credit_limit is None
+        and existing["credit_limit"] is None
+    ):
+        snapshot = await db.fetchrow(
+            """
+            SELECT balance, available_balance
+            FROM balance_snapshots
+            WHERE account_id = $1
+            ORDER BY captured_at DESC
+            LIMIT 1
+            """,
+            account_id,
+        )
+        if snapshot is not None and snapshot["available_balance"] is not None:
+            try:
+                derived = Decimal(str(snapshot["balance"])) + Decimal(str(snapshot["available_balance"]))
+                updates["credit_limit"] = derived
+            except Exception:
+                pass  # leave credit_limit unset if arithmetic fails
 
     if updates:
         set_clauses = ", ".join(
@@ -190,9 +296,11 @@ async def update_account(
             a.currency,
             a.is_manual,
             a.credit_limit,
+            a.sfin_account_id,
             bs.balance        AS latest_balance,
             bs.balance_date,
-            bs.captured_at    AS latest_snapshot_at
+            bs.captured_at    AS latest_snapshot_at,
+            EXISTS(SELECT 1 FROM debt_metadata WHERE account_id = a.id) AS has_debt_metadata
         FROM accounts a
         LEFT JOIN LATERAL (
             SELECT balance, balance_date, captured_at
@@ -226,4 +334,8 @@ async def update_account(
                 or result["latest_snapshot_at"].replace(tzinfo=timezone.utc) < stale_cutoff
             )
         ),
+        needs_classification=(
+            result["type"] == "other" and result["sfin_account_id"] is not None
+        ),
+        has_debt_metadata=result["has_debt_metadata"],
     )
