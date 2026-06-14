@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List
+from typing import List, Union
 
 from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -27,7 +27,8 @@ class Settings(BaseSettings):
     MASTER_KEY: str = "changeme"
 
     # CORS — comma-separated list in env, e.g. "http://localhost:3000,https://app.example.com"
-    CORS_ORIGINS: List[str] = ["http://localhost:3000"]
+    # Use Union[str, List[str]] so pydantic-settings passes raw string to field_validator
+    CORS_ORIGINS: Union[str, List[str]] = ["http://localhost:3000"]
 
     # Runtime
     DEBUG: bool = False

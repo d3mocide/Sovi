@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from app.auth.crypto import get_master_key
 from app.auth.session import get_current_user
 from app.database import get_db
+from app.dependencies import get_arq_redis
 from app.models.simplefin import ConnectRequest, ConnectResponse, StatusResponse
 from app.simplefin.client import SimpleFINAuthError, SimpleFINProtocolError
 from app.simplefin.service import connect_simplefin
@@ -92,3 +93,32 @@ async def disconnect(
         user_id,
     )
     return Response(status_code=204)
+
+
+@router.post("/refresh", status_code=202)
+async def trigger_refresh(
+    db: Annotated[asyncpg.Connection, Depends(get_db)],
+    user: Annotated[dict, Depends(get_current_user)],
+    arq_redis=Depends(get_arq_redis),
+) -> dict:
+    """
+    Enqueue an on-demand sync job for the current user.
+
+    Returns 202 Accepted immediately; the worker picks up the job asynchronously.
+    """
+    user_id = str(user["id"])
+
+    row = await db.fetchrow(
+        "SELECT status FROM simplefin_credentials WHERE user_id=$1",
+        user_id,
+    )
+    if row is None:
+        raise HTTPException(status_code=404, detail="No SimpleFIN credentials connected")
+    if row["status"] == "auth_failed":
+        raise HTTPException(
+            status_code=400,
+            detail="SimpleFIN credentials have failed authentication — please reconnect",
+        )
+
+    await arq_redis.enqueue_job("sync_user_job", user_id)
+    return {"status": "queued"}

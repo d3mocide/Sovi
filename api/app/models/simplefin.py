@@ -45,6 +45,7 @@ class AccountResponse(BaseModel):
     credit_limit: Decimal | None
     latest_balance: Decimal | None
     balance_date: datetime | None
+    needs_update: bool = False  # True for manual accounts with no balance snapshot in last 30 days
 
 
 class UpdateAccountRequest(BaseModel):

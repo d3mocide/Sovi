@@ -12,4 +12,4 @@ COPY . .
 RUN chown -R sovi:sovi /app
 USER sovi
 
-CMD ["arq", "worker.WorkerSettings"]
+CMD ["python", "-m", "arq", "main.WorkerSettings"]

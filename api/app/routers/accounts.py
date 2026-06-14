@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
 import asyncpg
@@ -10,6 +10,8 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from app.auth.session import get_current_user
 from app.database import get_db
 from app.models.simplefin import AccountResponse, ManualAccountRequest, UpdateAccountRequest
+
+_STALE_MANUAL_DAYS = 30
 
 router = APIRouter(tags=["accounts"])
 
@@ -79,6 +81,8 @@ async def list_accounts(
     """
     user_id = str(user["id"])
 
+    stale_cutoff = datetime.now(tz=timezone.utc) - timedelta(days=_STALE_MANUAL_DAYS)
+
     rows = await db.fetch(
         """
         SELECT
@@ -88,14 +92,15 @@ async def list_accounts(
             a.currency,
             a.is_manual,
             a.credit_limit,
-            bs.balance   AS latest_balance,
-            bs.balance_date
+            bs.balance        AS latest_balance,
+            bs.balance_date,
+            bs.captured_at    AS latest_snapshot_at
         FROM accounts a
         LEFT JOIN LATERAL (
-            SELECT balance, balance_date
+            SELECT balance, balance_date, captured_at
             FROM balance_snapshots
             WHERE account_id = a.id
-            ORDER BY balance_date DESC
+            ORDER BY captured_at DESC
             LIMIT 1
         ) bs ON TRUE
         WHERE a.user_id = $1
@@ -115,6 +120,13 @@ async def list_accounts(
             credit_limit=row["credit_limit"],
             latest_balance=row["latest_balance"],
             balance_date=row["balance_date"],
+            needs_update=(
+                row["is_manual"]
+                and (
+                    row["latest_snapshot_at"] is None
+                    or row["latest_snapshot_at"] if row["latest_snapshot_at"].tzinfo else row["latest_snapshot_at"].replace(tzinfo=timezone.utc) < stale_cutoff
+                )
+            ),
         )
         for row in rows
     ]
@@ -166,6 +178,8 @@ async def update_account(
             user_id,
         )
 
+    stale_cutoff = datetime.now(tz=timezone.utc) - timedelta(days=_STALE_MANUAL_DAYS)
+
     # Re-fetch updated row with latest balance
     result = await db.fetchrow(
         """
@@ -176,14 +190,15 @@ async def update_account(
             a.currency,
             a.is_manual,
             a.credit_limit,
-            bs.balance   AS latest_balance,
-            bs.balance_date
+            bs.balance        AS latest_balance,
+            bs.balance_date,
+            bs.captured_at    AS latest_snapshot_at
         FROM accounts a
         LEFT JOIN LATERAL (
-            SELECT balance, balance_date
+            SELECT balance, balance_date, captured_at
             FROM balance_snapshots
             WHERE account_id = a.id
-            ORDER BY balance_date DESC
+            ORDER BY captured_at DESC
             LIMIT 1
         ) bs ON TRUE
         WHERE a.id = $1 AND a.user_id = $2
@@ -204,4 +219,11 @@ async def update_account(
         credit_limit=result["credit_limit"],
         latest_balance=result["latest_balance"],
         balance_date=result["balance_date"],
+        needs_update=(
+            result["is_manual"]
+            and (
+                result["latest_snapshot_at"] is None
+                or result["latest_snapshot_at"].replace(tzinfo=timezone.utc) < stale_cutoff
+            )
+        ),
     )

@@ -1,0 +1,322 @@
+from __future__ import annotations
+
+import json
+import logging
+from datetime import datetime, timedelta, timezone
+from decimal import Decimal
+
+import asyncpg
+
+from app.auth.crypto import get_master_key as _get_master_key
+from app.simplefin.client import SimpleFINAuthError, fetch_accounts
+from app.simplefin.service import get_access_url, mark_auth_failed
+
+logger = logging.getLogger(__name__)
+
+_NINETY_DAYS = 90
+_BALANCE_EPSILON = Decimal("0.005")
+
+
+def _master_key() -> bytes:
+    """Decode master key from settings once per worker process."""
+    return _get_master_key()
+
+
+def _epoch_to_timestamptz(epoch: int | float) -> datetime:
+    """Convert a Unix epoch (int or float) to a timezone-aware datetime."""
+    return datetime.fromtimestamp(epoch, tz=timezone.utc)
+
+
+def _derive_account_type(sfin_account: dict) -> str:
+    """
+    Attempt to derive an account type from SimpleFIN org / name hints.
+    Falls back to 'other'.
+    """
+    # SimpleFIN doesn't mandate a type field; use heuristics on the name
+    name_lower = (sfin_account.get("name") or "").lower()
+    if "credit" in name_lower or "card" in name_lower or "visa" in name_lower or "mastercard" in name_lower:
+        return "credit_card"
+    if "mortgage" in name_lower or "loan" in name_lower or "heloc" in name_lower:
+        return "loan"
+    if "saving" in name_lower:
+        return "savings"
+    if "check" in name_lower:
+        return "checking"
+    return "other"
+
+
+def _derive_credit_limit(sfin_account: dict, account_type: str) -> Decimal | None:
+    """
+    Derive credit limit for credit card accounts.
+    credit_limit = balance + available-balance (if available-balance field exists).
+    """
+    if account_type != "credit_card":
+        return None
+    available_balance = sfin_account.get("available-balance")
+    if available_balance is None:
+        return None
+    try:
+        balance = Decimal(str(sfin_account.get("balance", 0)))
+        avail = Decimal(str(available_balance))
+        return balance + avail
+    except Exception:
+        return None
+
+
+async def _upsert_account(
+    db: asyncpg.Connection,
+    user_id: str,
+    sfin_account: dict,
+) -> tuple[str, str]:
+    """
+    Upsert a SimpleFIN account into the accounts table.
+    Returns (account_id, account_type).
+    """
+    sfin_account_id = sfin_account["id"]
+    conn_id = sfin_account.get("org", {}).get("id") or sfin_account.get("org", {}).get("name")
+    conn_name = sfin_account.get("org", {}).get("name")
+    name = sfin_account.get("name", "Unknown")
+    currency = sfin_account.get("currency", "USD")
+
+    account_type = _derive_account_type(sfin_account)
+    credit_limit = _derive_credit_limit(sfin_account, account_type)
+
+    row = await db.fetchrow(
+        """
+        INSERT INTO accounts (id, user_id, sfin_account_id, conn_id, conn_name, name, type,
+                              currency, is_manual, credit_limit)
+        VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, false, $8)
+        ON CONFLICT (user_id, sfin_account_id) DO UPDATE
+          SET conn_name    = EXCLUDED.conn_name,
+              name         = EXCLUDED.name,
+              currency     = EXCLUDED.currency,
+              credit_limit = EXCLUDED.credit_limit
+        RETURNING id, type
+        """,
+        user_id,
+        sfin_account_id,
+        conn_id,
+        conn_name,
+        name,
+        account_type,
+        currency,
+        credit_limit,
+    )
+    return str(row["id"]), row["type"]
+
+
+async def _write_balance_snapshot(
+    db: asyncpg.Connection,
+    user_id: str,
+    account_id: str,
+    sfin_account: dict,
+) -> bool:
+    """
+    Write a balance snapshot only if the balance has changed from the last one.
+    Returns True if a snapshot was written.
+    """
+    balance_raw = sfin_account.get("balance")
+    if balance_raw is None:
+        return False
+
+    new_balance = Decimal(str(balance_raw))
+
+    available_balance_raw = sfin_account.get("available-balance")
+    available_balance = Decimal(str(available_balance_raw)) if available_balance_raw is not None else None
+
+    balance_date_epoch = sfin_account.get("balance-date")
+    balance_date: datetime | None = None
+    if balance_date_epoch is not None:
+        balance_date = _epoch_to_timestamptz(balance_date_epoch)
+
+    # Fetch most recent snapshot
+    last_row = await db.fetchrow(
+        """
+        SELECT balance FROM balance_snapshots
+        WHERE account_id = $1
+        ORDER BY captured_at DESC
+        LIMIT 1
+        """,
+        account_id,
+    )
+
+    if last_row is not None:
+        last_balance = Decimal(str(last_row["balance"]))
+        if abs(new_balance - last_balance) <= _BALANCE_EPSILON:
+            return False
+
+    await db.execute(
+        """
+        INSERT INTO balance_snapshots (account_id, user_id, balance, available_balance, balance_date)
+        VALUES ($1, $2, $3, $4, $5)
+        """,
+        account_id,
+        user_id,
+        new_balance,
+        available_balance,
+        balance_date,
+    )
+    return True
+
+
+async def _upsert_transactions(
+    db: asyncpg.Connection,
+    user_id: str,
+    account_id: str,
+    transactions: list[dict],
+) -> int:
+    """
+    Upsert transactions for an account. Returns count of newly inserted rows.
+    """
+    new_count = 0
+    for txn in transactions:
+        sfin_txn_id = txn.get("id", "")
+        posted_epoch = txn.get("posted")
+        posted: datetime | None = _epoch_to_timestamptz(posted_epoch) if posted_epoch else None
+        amount = Decimal(str(txn["amount"]))
+        description = txn.get("description", "")
+        pending = txn.get("pending", False)
+        raw_extra_dict = txn.get("extra")
+        raw_extra = json.dumps(raw_extra_dict) if raw_extra_dict else None
+
+        result = await db.execute(
+            """
+            INSERT INTO transactions
+                (id, user_id, account_id, sfin_txn_id, posted, amount, description, pending, raw_extra)
+            VALUES
+                (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8)
+            ON CONFLICT (user_id, account_id, sfin_txn_id) DO NOTHING
+            """,
+            user_id,
+            account_id,
+            sfin_txn_id,
+            posted,
+            amount,
+            description,
+            pending,
+            raw_extra,
+        )
+        # asyncpg execute returns a status string like "INSERT 0 1" or "INSERT 0 0"
+        # Parse the count from the status string
+        try:
+            inserted = int(result.split()[-1])
+            new_count += inserted
+        except (IndexError, ValueError):
+            pass
+
+    return new_count
+
+
+async def sync_user(user_id: str, ctx: dict) -> dict:
+    """
+    Full sync for one user:
+    1. Get access URL from DB (decrypt)
+    2. Determine start_date (last_sync_at from simplefin_credentials, or 90 days ago)
+    3. fetch_accounts(access_url, start_date)
+    4. Upsert accounts
+    5. Write balance snapshots (dedupe: only write if balance changed)
+    6. Upsert transactions (dedupe by sfin_txn_id)
+    7. Update last_sync_at
+    Returns {"accounts": N, "transactions_new": M, "snapshots_written": K}
+    """
+    pool = ctx.get("pool")
+    if pool is None:
+        from worker.db import get_pool
+        pool = await get_pool()
+
+    async with pool.acquire() as db:
+        return await _sync_user_with_conn(db, user_id)
+
+
+async def _sync_user_with_conn(db: asyncpg.Connection, user_id: str) -> dict:
+    """Inner sync logic that operates on a single DB connection."""
+    master_key = _master_key()
+
+    # 1. Get and decrypt access URL — never log it
+    try:
+        access_url = await get_access_url(db, user_id, master_key)
+    except ValueError as exc:
+        logger.error("sync_user user_id=%s: failed to retrieve credentials: %s", user_id, exc)
+        raise
+
+    # 2. Determine start_date
+    cred_row = await db.fetchrow(
+        "SELECT last_sync_at FROM simplefin_credentials WHERE user_id=$1",
+        user_id,
+    )
+    if cred_row and cred_row["last_sync_at"] is not None:
+        start_date = int(cred_row["last_sync_at"].timestamp())
+    else:
+        cutoff = datetime.now(tz=timezone.utc) - timedelta(days=_NINETY_DAYS)
+        start_date = int(cutoff.timestamp())
+
+    # 3. Fetch accounts from SimpleFIN
+    try:
+        data = await fetch_accounts(access_url, start_date)
+    except SimpleFINAuthError:
+        logger.warning("sync_user user_id=%s: auth failed, marking credentials as auth_failed", user_id)
+        await mark_auth_failed(db, user_id)
+        raise
+    except Exception:
+        logger.exception("sync_user user_id=%s: unexpected error fetching accounts", user_id)
+        raise
+    finally:
+        # Zero out the access URL from local scope ASAP
+        del access_url
+
+    sfin_accounts = data.get("accounts", [])
+    accounts_processed = 0
+    transactions_new = 0
+    snapshots_written = 0
+
+    for sfin_account in sfin_accounts:
+        # 4. Upsert account
+        try:
+            account_id, account_type = await _upsert_account(db, user_id, sfin_account)
+        except Exception:
+            logger.exception(
+                "sync_user user_id=%s: failed to upsert account sfin_id=%s",
+                user_id,
+                sfin_account.get("id", "<unknown>"),
+            )
+            continue
+
+        accounts_processed += 1
+
+        # 5. Write balance snapshot (deduplicated)
+        try:
+            wrote = await _write_balance_snapshot(db, user_id, account_id, sfin_account)
+            if wrote:
+                snapshots_written += 1
+        except Exception:
+            logger.exception(
+                "sync_user user_id=%s: failed to write balance snapshot account_id=%s",
+                user_id,
+                account_id,
+            )
+
+        # 6. Upsert transactions
+        txns = sfin_account.get("transactions", [])
+        try:
+            new_txn_count = await _upsert_transactions(db, user_id, account_id, txns)
+            transactions_new += new_txn_count
+        except Exception:
+            logger.exception(
+                "sync_user user_id=%s: failed to upsert transactions for account_id=%s",
+                user_id,
+                account_id,
+            )
+
+    # 7. Update last_sync_at
+    await db.execute(
+        "UPDATE simplefin_credentials SET last_sync_at=now() WHERE user_id=$1",
+        user_id,
+    )
+
+    result = {
+        "accounts": accounts_processed,
+        "transactions_new": transactions_new,
+        "snapshots_written": snapshots_written,
+    }
+    logger.info("sync_user user_id=%s completed: %s", user_id, result)
+    return result

@@ -84,9 +84,12 @@ services:
     environment:
       DB_PASSWORD_FILE: /run/secrets/db_password
       MASTER_KEY_FILE: /run/secrets/master_key
+      PYTHONPATH: /api
     secrets:
       - master_key
       - db_password
+    volumes:
+      - ./api:/api:ro
     networks:
       - internal
     depends_on:

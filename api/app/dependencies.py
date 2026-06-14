@@ -14,3 +14,8 @@ async def get_redis(request: Request):
 def get_master_key(request: Request) -> bytes:
     """FastAPI dependency: returns the decoded master key from app state."""
     return request.app.state.master_key
+
+
+def get_arq_redis(request: Request):
+    """FastAPI dependency: returns the arq Redis pool from app state (for job enqueueing)."""
+    return request.app.state.arq_redis

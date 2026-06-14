@@ -3,6 +3,8 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 
 import redis.asyncio as aioredis
+from arq import create_pool as arq_create_pool
+from arq.connections import RedisSettings
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
@@ -22,16 +24,19 @@ async def lifespan(app: FastAPI):
     app.state.master_key = get_master_key()
     # Initialise database pool
     await init_db()
-    # Initialise Redis connection pool
+    # Initialise Redis connection pool (for pub/sub, caching, sessions)
     app.state.redis = aioredis.from_url(
         settings.REDIS_URL,
         encoding="utf-8",
         decode_responses=True,
     )
+    # Initialise arq Redis pool (for job enqueueing)
+    app.state.arq_redis = await arq_create_pool(RedisSettings.from_dsn(settings.REDIS_URL))
     yield
     # Teardown
     await close_db()
     await app.state.redis.aclose()
+    await app.state.arq_redis.aclose()
 
 
 app = FastAPI(
