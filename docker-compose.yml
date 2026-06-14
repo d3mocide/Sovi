@@ -1,0 +1,138 @@
+secrets:
+  master_key:
+    file: ./secrets/master_key.txt
+  db_password:
+    file: ./secrets/db_password.txt
+
+networks:
+  internal:
+  frontend_net:
+
+volumes:
+  postgres_data:
+  redis_data:
+  npm_data:
+  npm_letsencrypt:
+  authelia_data:
+
+services:
+  npm:
+    image: jc21/nginx-proxy-manager:latest
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "81:81"
+      - "443:443"
+    volumes:
+      - npm_data:/data
+      - npm_letsencrypt:/etc/letsencrypt
+    networks:
+      - frontend_net
+
+  authelia:
+    image: authelia/authelia:latest
+    restart: unless-stopped
+    volumes:
+      - authelia_data:/config
+      - ./authelia/configuration.yml:/config/configuration.yml:ro
+    environment:
+      AUTHELIA_JWT_SECRET: ${AUTHELIA_JWT_SECRET}
+      AUTHELIA_SESSION_SECRET: ${AUTHELIA_SESSION_SECRET}
+      AUTHELIA_SESSION_DOMAIN: ${AUTHELIA_SESSION_DOMAIN}
+    networks:
+      - frontend_net
+    depends_on:
+      - redis
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    networks:
+      - frontend_net
+
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DB_PASSWORD_FILE: /run/secrets/db_password
+      MASTER_KEY_FILE: /run/secrets/master_key
+    secrets:
+      - master_key
+      - db_password
+    networks:
+      - internal
+      - frontend_net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DB_PASSWORD_FILE: /run/secrets/db_password
+      MASTER_KEY_FILE: /run/secrets/master_key
+    secrets:
+      - master_key
+      - db_password
+    networks:
+      - internal
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  postgres:
+    image: timescale/timescaledb:latest-pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-sovi}
+      POSTGRES_USER: ${DB_USER:-sovi}
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    secrets:
+      - db_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-sovi} -d ${DB_NAME:-sovi}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  litellm:
+    image: ghcr.io/berriai/litellm:main-latest
+    restart: unless-stopped
+    environment:
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY}
+    networks:
+      - internal
