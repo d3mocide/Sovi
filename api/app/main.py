@@ -7,14 +7,19 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 
+from app.auth.crypto import get_master_key
 from app.config import settings
 from app.database import close_db, init_db
 from app.routers import health
 from app.routers import auth as auth_router
+from app.routers import simplefin as simplefin_router
+from app.routers import accounts as accounts_router
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Decode and cache master key in app state (avoids repeated hex-decoding)
+    app.state.master_key = get_master_key()
     # Initialise database pool
     await init_db()
     # Initialise Redis connection pool
@@ -52,3 +57,5 @@ app.add_middleware(
 
 app.include_router(health.router)
 app.include_router(auth_router.router, prefix="/auth")
+app.include_router(simplefin_router.router, prefix="/simplefin")
+app.include_router(accounts_router.router, prefix="/accounts")
