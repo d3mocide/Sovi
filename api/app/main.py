@@ -18,6 +18,8 @@ from app.routers import simplefin as simplefin_router
 from app.routers import accounts as accounts_router
 from app.routers import debt as debt_router
 from app.routers import simulate as simulate_router
+from app.routers import categories as categories_router
+from app.routers import transactions as transactions_router
 
 
 @asynccontextmanager
@@ -68,3 +70,5 @@ app.include_router(simplefin_router.router, prefix="/simplefin")
 app.include_router(accounts_router.router, prefix="/accounts")
 app.include_router(debt_router.router)
 app.include_router(simulate_router.router)
+app.include_router(categories_router.router)
+app.include_router(transactions_router.router, prefix="/transactions")

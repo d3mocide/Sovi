@@ -2,14 +2,20 @@ from __future__ import annotations
 
 import json
 import logging
+import sys
+import os
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 import asyncpg
 
+# Ensure api package is importable when running the worker directly
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'api'))
+
 from app.auth.crypto import get_master_key as _get_master_key
 from app.simplefin.client import SimpleFINAuthError, fetch_accounts
 from app.simplefin.service import get_access_url, mark_auth_failed
+from app.categorization.pipeline import categorize_transaction
 
 logger = logging.getLogger(__name__)
 
@@ -164,11 +170,13 @@ async def _upsert_transactions(
     user_id: str,
     account_id: str,
     transactions: list[dict],
-) -> int:
+) -> tuple[int, list[tuple[str, str, Decimal]]]:
     """
-    Upsert transactions for an account. Returns count of newly inserted rows.
+    Upsert transactions for an account.
+    Returns (count_of_new_rows, list_of_(txn_id, description, amount) for new rows).
     """
     new_count = 0
+    new_txn_ids: list[tuple[str, str, Decimal]] = []
     for txn in transactions:
         sfin_txn_id = txn.get("id", "")
         posted_epoch = txn.get("posted")
@@ -179,13 +187,14 @@ async def _upsert_transactions(
         raw_extra_dict = txn.get("extra")
         raw_extra = json.dumps(raw_extra_dict) if raw_extra_dict else None
 
-        result = await db.execute(
+        result = await db.fetchrow(
             """
             INSERT INTO transactions
                 (id, user_id, account_id, sfin_txn_id, posted, amount, description, pending, raw_extra)
             VALUES
                 (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8)
             ON CONFLICT (user_id, account_id, sfin_txn_id) DO NOTHING
+            RETURNING id
             """,
             user_id,
             account_id,
@@ -196,15 +205,11 @@ async def _upsert_transactions(
             pending,
             raw_extra,
         )
-        # asyncpg execute returns a status string like "INSERT 0 1" or "INSERT 0 0"
-        # Parse the count from the status string
-        try:
-            inserted = int(result.split()[-1])
-            new_count += inserted
-        except (IndexError, ValueError):
-            pass
+        if result:
+            new_count += 1
+            new_txn_ids.append((str(result["id"]), description, amount))
 
-    return new_count
+    return new_count, new_txn_ids
 
 
 async def sync_user(user_id: str, ctx: dict) -> dict:
@@ -298,7 +303,7 @@ async def _sync_user_with_conn(db: asyncpg.Connection, user_id: str) -> dict:
         # 6. Upsert transactions
         txns = sfin_account.get("transactions", [])
         try:
-            new_txn_count = await _upsert_transactions(db, user_id, account_id, txns)
+            new_txn_count, new_txn_ids = await _upsert_transactions(db, user_id, account_id, txns)
             transactions_new += new_txn_count
         except Exception:
             logger.exception(
@@ -306,6 +311,25 @@ async def _sync_user_with_conn(db: asyncpg.Connection, user_id: str) -> dict:
                 user_id,
                 account_id,
             )
+            new_txn_ids = []
+
+        # 6b. Categorize newly inserted transactions
+        for txn_id, description, amount in new_txn_ids:
+            try:
+                cat_id, source = await categorize_transaction(db, user_id, txn_id, description, amount)
+                if cat_id:
+                    await db.execute(
+                        "UPDATE transactions SET category_id=$1, category_source=$2 WHERE id=$3",
+                        cat_id,
+                        source,
+                        txn_id,
+                    )
+            except Exception:
+                logger.exception(
+                    "sync_user user_id=%s: failed to categorize transaction_id=%s",
+                    user_id,
+                    txn_id,
+                )
 
     # 7. Update last_sync_at
     await db.execute(

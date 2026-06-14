@@ -30,6 +30,10 @@ class Settings(BaseSettings):
     # Use Union[str, List[str]] so pydantic-settings passes raw string to field_validator
     CORS_ORIGINS: Union[str, List[str]] = ["http://localhost:3000"]
 
+    # LiteLLM
+    LITELLM_URL: str = "http://litellm:4000"
+    LITELLM_KEY: str = "changeme"
+
     # Runtime
     DEBUG: bool = False
     LOG_LEVEL: str = "info"
