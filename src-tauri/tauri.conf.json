@@ -1,0 +1,36 @@
+{
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
+    "devPath": "http://localhost:3000",
+    "distDir": "../frontend/dist"
+  },
+  "package": {
+    "productName": "Sovi",
+    "version": "0.1.0"
+  },
+  "tauri": {
+    "allowlist": {
+      "all": false,
+      "shell": { "all": false },
+      "http": { "all": true, "scope": ["https://*", "http://localhost:*"] }
+    },
+    "bundle": {
+      "active": true,
+      "identifier": "com.sovi.app",
+      "icon": ["icons/icon.png"]
+    },
+    "security": {
+      "csp": "default-src 'self'; connect-src 'self' https: http://localhost:*"
+    },
+    "windows": [
+      {
+        "title": "Sovi",
+        "width": 1200,
+        "height": 800,
+        "minWidth": 800,
+        "minHeight": 600
+      }
+    ]
+  }
+}
