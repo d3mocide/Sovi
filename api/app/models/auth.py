@@ -42,3 +42,4 @@ class MeResponse(BaseModel):
     email: str
     display_name: str | None
     totp_enabled: bool
+    is_admin: bool

@@ -9,6 +9,23 @@ from app.config import settings
 _pool: asyncpg.Pool | None = None
 
 
+import json
+
+async def init_connection(conn) -> None:
+    await conn.set_type_codec(
+        "jsonb",
+        encoder=json.dumps,
+        decoder=json.loads,
+        schema="pg_catalog",
+    )
+    await conn.set_type_codec(
+        "json",
+        encoder=json.dumps,
+        decoder=json.loads,
+        schema="pg_catalog",
+    )
+
+
 async def init_db() -> None:
     global _pool
     _pool = await asyncpg.create_pool(
@@ -16,6 +33,7 @@ async def init_db() -> None:
         min_size=2,
         max_size=10,
         command_timeout=30,
+        init=init_connection,
     )
 
 

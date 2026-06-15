@@ -7,9 +7,10 @@ RUN addgroup --system sovi && adduser --system --ingroup sovi sovi
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+COPY . worker/
 
 RUN chown -R sovi:sovi /app
 USER sovi
 
-CMD ["python", "-m", "arq", "main.WorkerSettings"]
+CMD ["python", "-m", "arq", "worker.main.WorkerSettings"]
+

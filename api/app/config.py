@@ -38,6 +38,28 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     LOG_LEVEL: str = "info"
 
+    @model_validator(mode="before")
+    @classmethod
+    def load_secrets_from_files(cls, data: dict) -> dict:
+        import os
+        # Load DB_PASSWORD from DB_PASSWORD_FILE if specified
+        db_pass_file = os.environ.get("DB_PASSWORD_FILE") or data.get("DB_PASSWORD_FILE")
+        if db_pass_file and os.path.exists(db_pass_file):
+            try:
+                with open(db_pass_file, "r") as f:
+                    data["DB_PASSWORD"] = f.read().strip()
+            except Exception:
+                pass
+        # Load MASTER_KEY from MASTER_KEY_FILE if specified
+        master_key_file = os.environ.get("MASTER_KEY_FILE") or data.get("MASTER_KEY_FILE")
+        if master_key_file and os.path.exists(master_key_file):
+            try:
+                with open(master_key_file, "r") as f:
+                    data["MASTER_KEY"] = f.read().strip()
+            except Exception:
+                pass
+        return data
+
     @model_validator(mode="after")
     def assemble_db_url(self) -> "Settings":
         if not self.DATABASE_URL:

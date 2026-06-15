@@ -79,15 +79,18 @@ async def register(
     pw_hash = hash_password(body.password)
 
     try:
+        user_count = await db.fetchval("SELECT COUNT(*) FROM users")
+        is_first_user = (user_count == 0)
         user_id = await db.fetchval(
             """
-            INSERT INTO users (email, password_hash, display_name)
-            VALUES ($1, $2, $3)
+            INSERT INTO users (email, password_hash, display_name, is_admin)
+            VALUES ($1, $2, $3, $4)
             RETURNING id
             """,
             body.email,
             pw_hash,
             body.display_name,
+            is_first_user,
         )
     except Exception:
         raise HTTPException(status_code=401, detail="Registration failed")
@@ -334,4 +337,44 @@ async def me(
         email=user["email"],
         display_name=user.get("display_name"),
         totp_enabled=user["totp_enabled"],
+        is_admin=user.get("is_admin", False),
     )
+
+
+@router.get("/setup-status")
+async def setup_status(
+    response: Response,
+    db: Annotated[asyncpg.Connection, Depends(get_db)],
+):
+    """Check if the system has been initialized (i.e. has at least one user)."""
+    set_csrf_cookie(response, secure=not settings.DEBUG)
+    count = await db.fetchval("SELECT COUNT(*) FROM users")
+    return {"is_initialized": count > 0}
+
+
+@router.post("/totp/disable", response_model=MeResponse)
+async def totp_disable(
+    request: Request,
+    db: Annotated[asyncpg.Connection, Depends(get_db)],
+    user: Annotated[dict, Depends(get_current_user)],
+    _csrf: Annotated[None, Depends(verify_csrf)],
+) -> MeResponse:
+    """Disable TOTP for the current user."""
+    user_id = str(user["id"])
+    try:
+        await db.execute(
+            "UPDATE users SET totp_enabled = false, totp_secret_enc = NULL WHERE id = $1",
+            user_id,
+        )
+    except Exception:
+        raise HTTPException(status_code=400, detail="Failed to disable TOTP")
+    
+    return MeResponse(
+        user_id=user_id,
+        email=user["email"],
+        display_name=user.get("display_name"),
+        totp_enabled=False,
+        is_admin=user.get("is_admin", False),
+    )
+
+

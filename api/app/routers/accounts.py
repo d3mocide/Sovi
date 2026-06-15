@@ -127,7 +127,10 @@ async def list_accounts(
                 row["is_manual"]
                 and (
                     row["latest_snapshot_at"] is None
-                    or row["latest_snapshot_at"] if row["latest_snapshot_at"].tzinfo else row["latest_snapshot_at"].replace(tzinfo=timezone.utc) < stale_cutoff
+                    or (
+                        (row["latest_snapshot_at"] if row["latest_snapshot_at"].tzinfo else row["latest_snapshot_at"].replace(tzinfo=timezone.utc))
+                        < stale_cutoff
+                    )
                 )
             ),
             needs_classification=(
@@ -331,7 +334,10 @@ async def update_account(
             result["is_manual"]
             and (
                 result["latest_snapshot_at"] is None
-                or result["latest_snapshot_at"].replace(tzinfo=timezone.utc) < stale_cutoff
+                or (
+                    (result["latest_snapshot_at"] if result["latest_snapshot_at"].tzinfo else result["latest_snapshot_at"].replace(tzinfo=timezone.utc))
+                    < stale_cutoff
+                )
             )
         ),
         needs_classification=(

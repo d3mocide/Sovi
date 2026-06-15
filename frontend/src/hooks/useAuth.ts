@@ -6,11 +6,13 @@ interface User {
   email: string;
   display_name: string | null;
   totp_enabled: boolean;
+  is_admin: boolean;
 }
 
 interface AuthState {
   user: User | null;
   loading: boolean;
+  initialized: boolean | null;
 }
 
 interface LoginResult {
@@ -28,14 +30,26 @@ interface TotpVerifyResult {
 }
 
 export function useAuth() {
-  const [state, setState] = useState<AuthState>({ user: null, loading: true });
+  const [state, setState] = useState<AuthState>({
+    user: null,
+    loading: true,
+    initialized: null,
+  });
 
   const fetchMe = useCallback(async () => {
     try {
-      const user = await api.get<User>("/auth/me");
-      setState({ user, loading: false });
+      const { is_initialized } = await api.get<{ is_initialized: boolean }>(
+        "/auth/setup-status"
+      );
+      let user: User | null = null;
+      try {
+        user = await api.get<User>("/auth/me");
+      } catch {
+        // User not logged in
+      }
+      setState({ user, loading: false, initialized: is_initialized });
     } catch {
-      setState({ user: null, loading: false });
+      setState({ user: null, loading: false, initialized: true });
     }
   }, []);
 
@@ -51,10 +65,21 @@ export function useAuth() {
     []
   );
 
+  const register = useCallback(
+    async (email: string, password: string, displayName: string): Promise<void> => {
+      await api.post("/auth/register", {
+        email,
+        password,
+        display_name: displayName,
+      });
+    },
+    []
+  );
+
   const logout = useCallback(async () => {
     await api.post("/auth/logout");
-    setState({ user: null, loading: false });
-  }, []);
+    setState({ user: null, loading: false, initialized: state.initialized });
+  }, [state.initialized]);
 
   const enrollTotp = useCallback(async (): Promise<TotpEnrollResult> => {
     return api.post<TotpEnrollResult>("/auth/totp/enroll");
@@ -71,12 +96,22 @@ export function useAuth() {
     [fetchMe]
   );
 
+  const disableTotp = useCallback(async (): Promise<User> => {
+    const result = await api.post<User>("/auth/totp/disable");
+    await fetchMe();
+    return result;
+  }, [fetchMe]);
+
   return {
     user: state.user,
     loading: state.loading,
+    initialized: state.initialized,
     login,
+    register,
     logout,
     enrollTotp,
     verifyTotp,
+    disableTotp,
+    refreshAuth: fetchMe,
   };
 }

@@ -7,7 +7,7 @@ import { Card } from "../components/ui/Card";
 import { theme } from "../theme";
 
 export function TotpPage() {
-  const { enrollTotp, verifyTotp } = useAuth();
+  const { enrollTotp, verifyTotp, user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
   const [code, setCode] = useState("");
@@ -177,6 +177,16 @@ export function TotpPage() {
           >
             Verify
           </Button>
+
+          {!authLoading && user !== null && (
+            <Button
+              variant="secondary"
+              onClick={() => navigate("/")}
+              style={{ marginTop: "8px" }}
+            >
+              Cancel / Skip
+            </Button>
+          )}
         </div>
       </div>
     </div>

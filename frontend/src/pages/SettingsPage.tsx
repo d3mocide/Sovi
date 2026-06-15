@@ -15,7 +15,7 @@ interface SfinStatus {
 }
 
 export function SettingsPage() {
-  const { user, logout } = useAuth();
+  const { user, logout, disableTotp } = useAuth();
   const navigate = useNavigate();
 
   const [sfinStatus, setSfinStatus] = useState<SfinStatus | null>(null);
@@ -24,6 +24,18 @@ export function SettingsPage() {
   const [disconnecting, setDisconnecting] = useState(false);
   const [connectMsg, setConnectMsg] = useState<string | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [disablingTotp, setDisablingTotp] = useState(false);
+
+  const handleDisableTotp = async () => {
+    setDisablingTotp(true);
+    try {
+      await disableTotp();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to disable TOTP");
+    } finally {
+      setDisablingTotp(false);
+    }
+  };
 
   const loadStatus = useCallback(async () => {
     try {
@@ -147,9 +159,29 @@ export function SettingsPage() {
               <span style={{ fontSize: "13px", color: theme.colors.textMuted }}>
                 Two-factor auth
               </span>
-              <Badge variant={user?.totp_enabled ? "positive" : "warning"}>
-                {user?.totp_enabled ? "Enabled" : "Not set up"}
-              </Badge>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <Badge variant={user?.totp_enabled ? "positive" : "warning"}>
+                  {user?.totp_enabled ? "Enabled" : "Not set up"}
+                </Badge>
+                {user?.totp_enabled ? (
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={handleDisableTotp}
+                    loading={disablingTotp}
+                  >
+                    Disable
+                  </Button>
+                ) : (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => navigate("/totp")}
+                  >
+                    Set up
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </Card>

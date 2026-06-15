@@ -11,21 +11,16 @@ networks:
 volumes:
   postgres_data:
   redis_data:
-  npm_data:
-  npm_letsencrypt:
   authelia_data:
 
 services:
-  npm:
-    image: jc21/nginx-proxy-manager:latest
+  nginx:
+    image: nginx:alpine
     restart: unless-stopped
     ports:
       - "80:80"
-      - "81:81"
-      - "443:443"
     volumes:
-      - npm_data:/data
-      - npm_letsencrypt:/etc/letsencrypt
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     networks:
       - frontend_net
 
@@ -39,6 +34,8 @@ services:
       AUTHELIA_JWT_SECRET: ${AUTHELIA_JWT_SECRET}
       AUTHELIA_SESSION_SECRET: ${AUTHELIA_SESSION_SECRET}
       AUTHELIA_SESSION_DOMAIN: ${AUTHELIA_SESSION_DOMAIN}
+      AUTHELIA_STORAGE_ENCRYPTION_KEY: ${AUTHELIA_STORAGE_ENCRYPTION_KEY}
+      AUTHELIA_DEFAULT_REDIRECTION_URL: https://${AUTHELIA_SESSION_DOMAIN}
     networks:
       - frontend_net
     depends_on:
@@ -84,7 +81,7 @@ services:
     environment:
       DB_PASSWORD_FILE: /run/secrets/db_password
       MASTER_KEY_FILE: /run/secrets/master_key
-      PYTHONPATH: /api
+      PYTHONPATH: /app:/api
     secrets:
       - master_key
       - db_password

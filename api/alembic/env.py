@@ -11,8 +11,9 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Allow DATABASE_URL env var to override alembic.ini's sqlalchemy.url
-database_url = os.environ.get("DATABASE_URL")
+# Allow DATABASE_URL from settings to override alembic.ini's sqlalchemy.url
+from app.config import settings
+database_url = settings.DATABASE_URL
 if database_url:
     # asyncpg DSNs use postgresql+asyncpg://; Alembic needs the sync dialect
     database_url = database_url.replace("postgresql+asyncpg://", "postgresql://")

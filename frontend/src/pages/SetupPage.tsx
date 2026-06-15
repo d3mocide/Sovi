@@ -5,28 +5,42 @@ import { Input } from "../components/ui/Input";
 import { Button } from "../components/ui/Button";
 import { theme } from "../theme";
 
-export function LoginPage() {
-  const { login, refreshAuth } = useAuth();
+export function SetupPage() {
+  const { register, login, refreshAuth } = useAuth();
   const navigate = useNavigate();
+
   const [email, setEmail] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (password.length < 12) {
+      setError("Password must be at least 12 characters");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
     setLoading(true);
     try {
-      const result = await login(email, password);
-      if (result.totp_required) {
-        navigate("/totp");
-      } else {
-        await refreshAuth();
-        navigate("/");
-      }
+      // 1. Register the admin user
+      await register(email, password, displayName);
+      // 2. Perform login immediately
+      await login(email, password);
+      // 3. Refresh auth state
+      await refreshAuth();
+      // 4. Navigate to TOTP setup
+      navigate("/totp");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      setError(err instanceof Error ? err.message : "Setup failed");
     } finally {
       setLoading(false);
     }
@@ -44,7 +58,7 @@ export function LoginPage() {
         background: theme.colors.bg,
       }}
     >
-      <div style={{ width: "100%", maxWidth: "380px" }}>
+      <div style={{ width: "100%", maxWidth: "420px" }}>
         <div style={{ marginBottom: "40px" }}>
           <h1
             style={{
@@ -54,10 +68,10 @@ export function LoginPage() {
               letterSpacing: "-0.02em",
             }}
           >
-            Sovi
+            Sovi Setup
           </h1>
           <p style={{ color: theme.colors.textMuted, fontSize: "14px", marginTop: "6px" }}>
-            Your numbers. Your stack. Your control.
+            Welcome to Sovi! Create your Admin account to initialize the system.
           </p>
         </div>
 
@@ -66,19 +80,39 @@ export function LoginPage() {
           style={{ display: "flex", flexDirection: "column", gap: "16px" }}
         >
           <Input
-            label="Email"
+            label="Email Address"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             autoComplete="email"
+            placeholder="admin@example.com"
             required
           />
           <Input
-            label="Password"
+            label="Display Name"
+            type="text"
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+            autoComplete="name"
+            placeholder="Administrator"
+            required
+          />
+          <Input
+            label="Password (min 12 characters)"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            autoComplete="current-password"
+            autoComplete="new-password"
+            placeholder="••••••••••••"
+            required
+          />
+          <Input
+            label="Confirm Password"
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            autoComplete="new-password"
+            placeholder="••••••••••••"
             required
           />
 
@@ -98,7 +132,7 @@ export function LoginPage() {
           )}
 
           <Button type="submit" loading={loading} size="lg" style={{ marginTop: "8px" }}>
-            Sign in
+            Create Admin Account
           </Button>
         </form>
       </div>

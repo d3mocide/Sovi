@@ -9,8 +9,10 @@ import { SimulatorPage } from "./pages/SimulatorPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { theme } from "./theme";
 
+import { SetupPage } from "./pages/SetupPage";
+
 function Protected({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, loading, initialized } = useAuth();
   if (loading) {
     return (
       <div
@@ -28,15 +30,32 @@ function Protected({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
+  if (initialized === false) return <Navigate to="/setup" replace />;
   if (!user) return <Navigate to="/login" replace />;
   return <>{children}</>;
+}
+
+function LoginRoute() {
+  const { user, loading, initialized } = useAuth();
+  if (loading) return null;
+  if (initialized === false) return <Navigate to="/setup" replace />;
+  if (user) return <Navigate to="/" replace />;
+  return <LoginPage />;
+}
+
+function SetupRoute() {
+  const { loading, initialized } = useAuth();
+  if (loading) return null;
+  if (initialized === true) return <Navigate to="/login" replace />;
+  return <SetupPage />;
 }
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/login" element={<LoginPage />} />
+        <Route path="/setup" element={<SetupRoute />} />
+        <Route path="/login" element={<LoginRoute />} />
         <Route path="/totp" element={<TotpPage />} />
         <Route
           path="/"

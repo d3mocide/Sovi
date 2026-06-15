@@ -64,16 +64,13 @@ async def get_current_user(
     if session is None:
         raise HTTPException(status_code=401, detail="Session expired or invalid")
 
-    if not session.get("totp_verified"):
-        raise HTTPException(status_code=401, detail="TOTP verification required")
-
     user_id = session.get("user_id")
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid session")
 
     try:
         row = await db.fetchrow(
-            "SELECT id, email, display_name, totp_enabled FROM users WHERE id = $1",
+            "SELECT id, email, display_name, totp_enabled, is_admin FROM users WHERE id = $1",
             user_id,
         )
     except Exception:
@@ -81,6 +78,9 @@ async def get_current_user(
 
     if row is None:
         raise HTTPException(status_code=401, detail="User not found")
+
+    if row["totp_enabled"] and not session.get("totp_verified"):
+        raise HTTPException(status_code=401, detail="TOTP verification required")
 
     return dict(row)
 
