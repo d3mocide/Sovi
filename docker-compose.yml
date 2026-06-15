@@ -6,48 +6,21 @@ secrets:
 
 networks:
   internal:
-  frontend_net:
 
 volumes:
   postgres_data:
   redis_data:
-  authelia_data:
 
 services:
-  nginx:
-    image: nginx:alpine
-    restart: unless-stopped
-    ports:
-      - "80:80"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-    networks:
-      - frontend_net
-
-  authelia:
-    image: authelia/authelia:latest
-    restart: unless-stopped
-    volumes:
-      - authelia_data:/config
-      - ./authelia/configuration.yml:/config/configuration.yml:ro
-    environment:
-      AUTHELIA_JWT_SECRET: ${AUTHELIA_JWT_SECRET}
-      AUTHELIA_SESSION_SECRET: ${AUTHELIA_SESSION_SECRET}
-      AUTHELIA_SESSION_DOMAIN: ${AUTHELIA_SESSION_DOMAIN}
-      AUTHELIA_STORAGE_ENCRYPTION_KEY: ${AUTHELIA_STORAGE_ENCRYPTION_KEY}
-      AUTHELIA_DEFAULT_REDIRECTION_URL: https://${AUTHELIA_SESSION_DOMAIN}
-    networks:
-      - frontend_net
-    depends_on:
-      - redis
-
   frontend:
     build:
       context: .
       dockerfile: frontend/Dockerfile
     restart: unless-stopped
+    ports:
+      - "80:80"
     networks:
-      - frontend_net
+      - internal
 
   api:
     build:
@@ -64,7 +37,6 @@ services:
       - db_password
     networks:
       - internal
-      - frontend_net
     depends_on:
       postgres:
         condition: service_healthy
@@ -96,7 +68,7 @@ services:
         condition: service_healthy
 
   postgres:
-    image: timescale/timescaledb:latest-pg16
+    image: postgres:16-alpine
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${DB_NAME:-sovi}
@@ -122,18 +94,9 @@ services:
       - redis_data:/data
     networks:
       - internal
-      - frontend_net
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 10s
-
-  litellm:
-    image: ghcr.io/berriai/litellm:main-latest
-    restart: unless-stopped
-    environment:
-      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY}
-    networks:
-      - internal
