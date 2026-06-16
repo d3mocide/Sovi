@@ -3,13 +3,15 @@ name = "sovi"
 version = "0.1.0"
 edition = "2021"
 
+# Versions pinned exactly (see /DEPENDENCIES.md). Tauri 2.x is a separate
+# major migration tracked by Renovate; staying on the latest 1.x for now.
 [build-dependencies]
-tauri-build = { version = "1", features = [] }
+tauri-build = { version = "=1.5.6", features = [] }
 
 [dependencies]
-tauri = { version = "1", features = ["api-all"] }
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
+tauri = { version = "=1.8.3", features = ["api-all"] }
+serde = { version = "=1.0.228", features = ["derive"] }
+serde_json = "=1.0.150"
 
 [profile.release]
 panic = "abort"

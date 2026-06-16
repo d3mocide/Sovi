@@ -1,5 +1,7 @@
 import React from "react";
 import { Card } from "./ui/Card";
+import { Eyebrow, Numeral } from "./ui/Stat";
+import { Icon, type IconName } from "./ui/Icon";
 import { theme } from "../theme";
 import type { StreakInfo } from "../hooks/useGamification";
 
@@ -13,10 +15,11 @@ const STREAK_LABELS: Record<string, string> = {
   no_new_debt: "No new debt",
 };
 
-const STREAK_ICONS: Record<string, string> = {
-  on_time: "✓",
-  sync: "↻",
-  no_new_debt: "→",
+// Brand: icons are Lucide only — never Unicode glyphs (was ✓ ↻ →).
+const STREAK_ICONS: Record<string, IconName> = {
+  on_time: "check",
+  sync: "refresh",
+  no_new_debt: "shield",
 };
 
 export function StreakBadges({ streaks }: StreakBadgesProps) {
@@ -26,18 +29,7 @@ export function StreakBadges({ streaks }: StreakBadgesProps) {
 
   return (
     <div>
-      <p
-        style={{
-          fontSize: "12px",
-          fontWeight: 600,
-          letterSpacing: "0.08em",
-          textTransform: "uppercase",
-          color: theme.colors.textMuted,
-          marginBottom: "12px",
-        }}
-      >
-        Streaks
-      </p>
+      <Eyebrow style={{ marginBottom: "12px" }}>Streaks</Eyebrow>
       <div
         style={{
           display: "flex",
@@ -46,50 +38,64 @@ export function StreakBadges({ streaks }: StreakBadgesProps) {
           paddingBottom: "4px",
         }}
       >
-        {streaks.map((streak) => (
-          <Card
-            key={streak.type}
-            style={{
-              padding: "14px 18px",
-              minWidth: "120px",
-              flexShrink: 0,
-              textAlign: "center",
-            }}
-          >
-            <div
+        {streaks.map((streak) => {
+          const active = streak.current_count > 0;
+          return (
+            <Card
+              key={streak.type}
               style={{
-                fontSize: "28px",
-                fontWeight: 700,
-                color: streak.current_count > 0 ? theme.colors.positive : theme.colors.textMuted,
-                lineHeight: 1,
-                marginBottom: "6px",
+                padding: "14px 18px",
+                minWidth: "120px",
+                flexShrink: 0,
+                textAlign: "center",
               }}
             >
-              {streak.current_count}
-            </div>
-            <div
-              style={{
-                fontSize: "11px",
-                color: theme.colors.textMuted,
-                fontWeight: 500,
-              }}
-            >
-              {STREAK_LABELS[streak.type] ?? streak.type}
-            </div>
-            {streak.longest > 0 && (
               <div
                 style={{
-                  fontSize: "10px",
-                  color: theme.colors.textMuted,
-                  opacity: 0.6,
-                  marginTop: "4px",
+                  display: "flex",
+                  justifyContent: "center",
+                  marginBottom: "8px",
+                  color: active ? theme.colors.positive : theme.colors.textMuted,
                 }}
               >
-                Best: {streak.longest}
+                <Icon name={STREAK_ICONS[streak.type] ?? "check"} size={18} />
               </div>
-            )}
-          </Card>
-        ))}
+              <Numeral
+                as="div"
+                style={{
+                  fontSize: "28px",
+                  fontWeight: 700,
+                  color: active ? theme.colors.positive : theme.colors.textMuted,
+                  lineHeight: 1,
+                  marginBottom: "6px",
+                }}
+              >
+                {streak.current_count}
+              </Numeral>
+              <div
+                style={{
+                  fontSize: "11px",
+                  color: theme.colors.textMuted,
+                  fontWeight: 500,
+                }}
+              >
+                {STREAK_LABELS[streak.type] ?? streak.type}
+              </div>
+              {streak.longest > 0 && (
+                <div
+                  style={{
+                    fontSize: "10px",
+                    color: theme.colors.textMuted,
+                    opacity: 0.6,
+                    marginTop: "4px",
+                  }}
+                >
+                  Best: <Numeral>{streak.longest}</Numeral>
+                </div>
+              )}
+            </Card>
+          );
+        })}
       </div>
     </div>
   );

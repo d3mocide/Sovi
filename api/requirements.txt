@@ -1,4 +1,9 @@
-fastapi==0.115.0
+# Sovi API — pinned dependencies (exact versions only).
+# Policy: see /DEPENDENCIES.md. Every package is pinned to an exact version
+# that is the latest release at least 72h old, with all known CVEs patched.
+# Ongoing upgrades are proposed by Renovate (pin + 72h cooldown + latest).
+
+fastapi==0.136.3           # pulls starlette 1.3.1 — patches 8 starlette CVEs
 uvicorn[standard]==0.30.6
 asyncpg==0.29.0
 redis[asyncio]==5.0.8
@@ -7,13 +12,12 @@ pydantic-settings==2.4.0
 alembic==1.13.2
 sqlalchemy==2.0.35
 argon2-cffi==23.1.0
-python-multipart==0.0.9
+python-multipart==0.0.32   # patches CVE-2024-53981 + 6 later multipart CVEs
 pyotp==2.9.0
-cryptography==43.0.1
+cryptography==49.0.0       # patches PYSEC-2026-35, CVE-2024-12797, CVE-2026-26007, GHSA-537c-gmf6-5ccf
 httpx==0.27.2
 python-dateutil==2.9.0
-pytest==8.3.2
-pytest-asyncio==0.24.0
+pytest==9.0.3              # patches CVE-2025-71176
+pytest-asyncio==1.4.0      # required for pytest 9 compatibility
 arq==0.26.1
 psycopg2-binary==2.9.9
-

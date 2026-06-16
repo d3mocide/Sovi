@@ -8,9 +8,13 @@ interface ProgressBarProps {
   style?: React.CSSProperties;
 }
 
+/**
+ * Sovi ProgressBar — emerald by default (forward progress). Pill track on the
+ * hairline, calm fill animation, no bounce.
+ */
 export function ProgressBar({
   value,
-  color = theme.colors.accent,
+  color = theme.colors.positive,
   height = 6,
   style,
 }: ProgressBarProps) {
@@ -22,7 +26,7 @@ export function ProgressBar({
         width: "100%",
         height: `${height}px`,
         background: theme.colors.border,
-        borderRadius: "999px",
+        borderRadius: theme.radius.pill,
         overflow: "hidden",
         ...style,
       }}
@@ -32,8 +36,8 @@ export function ProgressBar({
           width: `${clamped}%`,
           height: "100%",
           background: color,
-          borderRadius: "999px",
-          transition: "width 0.4s ease",
+          borderRadius: theme.radius.pill,
+          transition: `width ${theme.motion.durSlow} ${theme.motion.easeOut}`,
         }}
       />
     </div>

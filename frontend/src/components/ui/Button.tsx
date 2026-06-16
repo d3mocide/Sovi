@@ -5,12 +5,21 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "primary" | "secondary" | "ghost" | "danger";
   size?: "sm" | "md" | "lg";
   loading?: boolean;
+  iconLeft?: React.ReactNode;
+  iconRight?: React.ReactNode;
 }
 
+/**
+ * Sovi Button — sky primary with dark text, bordered secondary, quiet ghost,
+ * and an amber "danger" (never red). Motion is calm: press shifts color, never
+ * scale; nothing bounces.
+ */
 export function Button({
   variant = "primary",
   size = "md",
   loading = false,
+  iconLeft,
+  iconRight,
   children,
   disabled,
   style,
@@ -22,13 +31,14 @@ export function Button({
     justifyContent: "center",
     gap: "8px",
     borderRadius: theme.radius.sm,
+    fontFamily: theme.fonts.sans,
     fontWeight: 500,
     cursor: disabled || loading ? "not-allowed" : "pointer",
     opacity: disabled || loading ? 0.6 : 1,
-    transition: "background 0.15s, opacity 0.15s",
-    border: "none",
+    transition: `background ${theme.motion.durFast} ${theme.motion.easeStandard}, opacity ${theme.motion.durFast}`,
+    border: "1px solid transparent",
     outline: "none",
-    fontFamily: theme.fonts.sans,
+    whiteSpace: "nowrap",
   };
 
   const sizeStyles: Record<string, React.CSSProperties> = {
@@ -40,21 +50,21 @@ export function Button({
   const variantStyles: Record<string, React.CSSProperties> = {
     primary: {
       background: theme.colors.accent,
-      color: "#0f172a",
+      color: theme.colors.onAccent,
     },
     secondary: {
       background: theme.colors.surface,
       color: theme.colors.text,
-      border: `1px solid ${theme.colors.border}`,
+      borderColor: theme.colors.border,
     },
     ghost: {
       background: "transparent",
       color: theme.colors.textMuted,
     },
     danger: {
-      background: "rgba(251,191,36,0.15)",
+      background: theme.colors.warningTint,
       color: theme.colors.warning,
-      border: `1px solid ${theme.colors.warning}`,
+      borderColor: theme.colors.warning,
     },
   };
 
@@ -64,7 +74,15 @@ export function Button({
       style={{ ...base, ...sizeStyles[size], ...variantStyles[variant], ...style }}
       {...props}
     >
-      {loading ? "Loading…" : children}
+      {loading ? (
+        "Loading…"
+      ) : (
+        <>
+          {iconLeft}
+          {children}
+          {iconRight}
+        </>
+      )}
     </button>
   );
 }

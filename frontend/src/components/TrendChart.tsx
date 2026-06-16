@@ -8,6 +8,7 @@ import {
   Tooltip,
 } from "recharts";
 import { Card } from "./ui/Card";
+import { Eyebrow } from "./ui/Stat";
 import { theme } from "../theme";
 import type { TrendPoint } from "../hooks/useGamification";
 
@@ -31,18 +32,7 @@ export function TrendChart({ trend }: TrendChartProps) {
   if (trend.length < 2) {
     return (
       <Card>
-        <p
-          style={{
-            fontSize: "12px",
-            fontWeight: 600,
-            letterSpacing: "0.08em",
-            textTransform: "uppercase",
-            color: theme.colors.textMuted,
-            marginBottom: "8px",
-          }}
-        >
-          90-day Trend
-        </p>
+        <Eyebrow style={{ marginBottom: "8px" }}>90-day trend</Eyebrow>
         <p style={{ color: theme.colors.textMuted, fontSize: "14px" }}>
           Not enough data yet.
         </p>
@@ -57,35 +47,25 @@ export function TrendChart({ trend }: TrendChartProps) {
 
   return (
     <Card>
-      <p
-        style={{
-          fontSize: "12px",
-          fontWeight: 600,
-          letterSpacing: "0.08em",
-          textTransform: "uppercase",
-          color: theme.colors.textMuted,
-          marginBottom: "16px",
-        }}
-      >
-        90-day Trend
-      </p>
+      <Eyebrow style={{ marginBottom: "16px" }}>90-day trend</Eyebrow>
       <ResponsiveContainer width="100%" height={160}>
         <AreaChart data={data} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
           <defs>
+            {/* The falling debt line — Sovi's own "imagery". */}
             <linearGradient id="debtGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor={theme.colors.accent} stopOpacity={0.3} />
-              <stop offset="95%" stopColor={theme.colors.accent} stopOpacity={0} />
+              <stop offset="5%" stopColor="var(--data-1)" stopOpacity={0.3} />
+              <stop offset="95%" stopColor="var(--data-1)" stopOpacity={0} />
             </linearGradient>
           </defs>
           <XAxis
             dataKey="date"
-            tick={{ fill: theme.colors.textMuted, fontSize: 11 }}
+            tick={{ fill: "var(--text-muted)", fontSize: 11, fontFamily: "var(--font-mono)" }}
             axisLine={false}
             tickLine={false}
             interval="preserveStartEnd"
           />
           <YAxis
-            tick={{ fill: theme.colors.textMuted, fontSize: 11 }}
+            tick={{ fill: "var(--text-muted)", fontSize: 11, fontFamily: "var(--font-mono)" }}
             axisLine={false}
             tickLine={false}
             tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
@@ -93,19 +73,21 @@ export function TrendChart({ trend }: TrendChartProps) {
           />
           <Tooltip
             contentStyle={{
-              background: theme.colors.surface,
-              border: `1px solid ${theme.colors.border}`,
-              borderRadius: theme.radius.sm,
-              color: theme.colors.text,
+              background: "var(--surface-card)",
+              border: "1px solid var(--border-hairline)",
+              borderRadius: "var(--radius-sm)",
+              color: "var(--text-strong)",
               fontSize: "13px",
+              fontFamily: "var(--font-mono)",
             }}
             formatter={(v: number) => [formatCurrency(v), "Total debt"]}
-            labelStyle={{ color: theme.colors.textMuted }}
+            labelStyle={{ color: "var(--text-muted)" }}
+            cursor={{ stroke: "var(--border-strong)" }}
           />
           <Area
             type="monotone"
             dataKey="balance"
-            stroke={theme.colors.accent}
+            stroke="var(--data-1)"
             strokeWidth={2}
             fill="url(#debtGrad)"
             dot={false}

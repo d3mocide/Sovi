@@ -1,0 +1,57 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard",
+    ":semanticCommits"
+  ],
+  "timezone": "Etc/UTC",
+  "labels": ["dependencies"],
+
+  "//rule-1-pin": "Every dependency is pinned to an exact version, in every ecosystem.",
+  "rangeStrategy": "pin",
+
+  "//rule-2-cooldown": "Never adopt a release younger than 72h (supply-chain safety). internalChecksFilter:strict makes Renovate actually hold the PR until the cooldown passes.",
+  "minimumReleaseAge": "72 hours",
+  "internalChecksFilter": "strict",
+
+  "//rule-3-latest": "Track the latest release. Majors are surfaced but require explicit approval on the dependency dashboard so app-code migrations (React 19, recharts 3, TS 6, Tauri 2, FastAPI majors) are reviewed, not auto-merged.",
+  "separateMultipleMajor": true,
+  "major": {
+    "dependencyDashboardApproval": true
+  },
+
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 5am on monday"]
+  },
+
+  "osvVulnerabilityAlerts": true,
+  "vulnerabilityAlerts": {
+    "labels": ["security", "dependencies"],
+    "//": "Security fixes are still held to the 72h cooldown — that window is precisely when malicious/compromised releases are caught.",
+    "minimumReleaseAge": "72 hours"
+  },
+
+  "packageRules": [
+    {
+      "description": "Group non-major npm dev tooling into one PR.",
+      "matchManagers": ["npm"],
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "npm dev dependencies"
+    },
+    {
+      "description": "Group non-major Python updates into one PR.",
+      "matchManagers": ["pip_requirements"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "python dependencies"
+    },
+    {
+      "description": "Group non-major Rust updates into one PR.",
+      "matchManagers": ["cargo"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "rust dependencies"
+    }
+  ]
+}

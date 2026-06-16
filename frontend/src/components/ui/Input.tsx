@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { theme } from "../../theme";
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
@@ -6,8 +6,19 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   error?: string;
 }
 
+/**
+ * Sovi Input — labelled field on a sunken navy fill. Errors are amber (never
+ * red) and stated as fact. Focus shows the calm sky ring.
+ */
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, style, ...props }, ref) => {
+  ({ label, error, style, onFocus, onBlur, ...props }, ref) => {
+    const [focused, setFocused] = useState(false);
+    const borderColor = error
+      ? theme.colors.warning
+      : focused
+        ? theme.colors.accent
+        : theme.colors.border;
+
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
         {label && (
@@ -24,16 +35,25 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         )}
         <input
           ref={ref}
+          onFocus={(e) => {
+            setFocused(true);
+            onFocus?.(e);
+          }}
+          onBlur={(e) => {
+            setFocused(false);
+            onBlur?.(e);
+          }}
           style={{
-            background: "#0f1f35",
-            border: `1px solid ${error ? theme.colors.warning : theme.colors.border}`,
+            background: theme.colors.inputFill,
+            border: `1px solid ${borderColor}`,
             borderRadius: theme.radius.sm,
             padding: "10px 14px",
             color: theme.colors.text,
             fontSize: "14px",
             outline: "none",
             width: "100%",
-            transition: "border-color 0.15s",
+            boxShadow: focused && !error ? theme.shadow.focus : "none",
+            transition: `border-color ${theme.motion.durFast} ${theme.motion.easeStandard}, box-shadow ${theme.motion.durFast}`,
             ...style,
           }}
           {...props}
@@ -47,4 +67,3 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
 );
 
 Input.displayName = "Input";
-

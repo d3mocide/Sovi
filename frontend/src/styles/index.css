@@ -1,0 +1,87 @@
+/* Sovi global stylesheet — canonical design tokens + base resets.
+   Fonts (Inter + JetBrains Mono) are loaded render-blocking in index.html. */
+
+@import url('./tokens/colors.css');
+@import url('./tokens/typography.css');
+@import url('./tokens/spacing.css');
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--bg-app);
+  color: var(--text-body);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+  transition: color var(--dur-fast) var(--ease-standard);
+}
+
+input,
+select,
+textarea,
+button {
+  font-family: inherit;
+}
+
+/* Calm focus ring — sky, no glare. */
+:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+  border-radius: var(--radius-xs);
+}
+
+/* Quiet, cool scrollbars on dark surfaces. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--border-hairline);
+  border-radius: var(--radius-pill);
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--border-strong);
+}
+
+/* Refresh-icon spin (calm, no bounce). */
+@keyframes sovi-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Range input accent (simulator). */
+input[type='range'] {
+  accent-color: var(--accent);
+}
+
+/* Native select / date controls read on the dark theme. */
+select option {
+  background: var(--surface-input-deep);
+  color: var(--text-body);
+}
+input[type='date']::-webkit-calendar-picker-indicator {
+  filter: invert(0.7);
+  cursor: pointer;
+}

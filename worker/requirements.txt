@@ -1,7 +1,11 @@
+# Sovi worker — pinned dependencies (exact versions only).
+# Policy: see /DEPENDENCIES.md. Pinned to the latest release >=72h old with
+# all known CVEs patched; ongoing upgrades are proposed by Renovate.
+
 arq==0.26.1
 asyncpg==0.29.0
 redis[asyncio]==5.0.8
 pydantic-settings==2.4.0
 httpx==0.27.2
-cryptography==43.0.1
+cryptography==49.0.0       # patches PYSEC-2026-35, CVE-2024-12797, CVE-2026-26007, GHSA-537c-gmf6-5ccf
 argon2-cffi==23.1.0

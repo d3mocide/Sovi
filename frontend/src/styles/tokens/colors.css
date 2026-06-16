@@ -1,0 +1,97 @@
+/* ============================================================
+   Sovi — Color tokens (canonical, mirrors brand/tokens/colors.css)
+   Dark, calm, credible. NO alarm red — debt is forward progress,
+   amber is the strongest "attention" signal we use.
+   ============================================================ */
+
+:root {
+  /* ---- Base palette: Navy / Slate (neutral spine) ---- */
+  --navy-950: #0a1222;   /* deepest — app letterbox / page void */
+  --navy-900: #0f172a;   /* primary app background */
+  --navy-850: #131d33;   /* raised background / sunken input fill */
+  --navy-800: #1e293b;   /* card surface */
+  --navy-750: #263348;   /* surface hover */
+  --navy-700: #334155;   /* border / hairline */
+  --navy-600: #475569;   /* strong border / disabled fg */
+  --navy-500: #64748b;   /* faint text */
+  --navy-400: #94a3b8;   /* muted text */
+  --navy-300: #cbd5e1;   /* secondary text */
+  --navy-200: #e2e8f0;   /* primary text */
+  --navy-100: #f1f5f9;   /* near-white (light surfaces) */
+  --navy-050: #f8fafc;   /* lightest */
+
+  /* ---- Sky: primary action / brand accent ---- */
+  --sky-700: #0369a1;
+  --sky-600: #0284c7;
+  --sky-500: #0ea5e9;   /* pressed / strong */
+  --sky-400: #38bdf8;   /* accent — primary action */
+  --sky-300: #7dd3fc;
+  --sky-200: #bae6fd;
+  --sky-glow: rgba(56, 189, 248, 0.15);   /* tint fills */
+  --sky-glow-strong: rgba(56, 189, 248, 0.3);
+
+  /* ---- Emerald: forward progress / positive ---- */
+  --emerald-500: #10b981;
+  --emerald-400: #34d399;   /* positive */
+  --emerald-300: #6ee7b7;
+  --emerald-glow: rgba(52, 211, 153, 0.15);
+  --emerald-glow-strong: rgba(52, 211, 153, 0.3);
+
+  /* ---- Amber: attention, never alarm ---- */
+  --amber-500: #f59e0b;
+  --amber-400: #fbbf24;   /* warning */
+  --amber-300: #fcd34d;
+  --amber-glow: rgba(251, 191, 36, 0.15);
+  --amber-glow-strong: rgba(251, 191, 36, 0.3);
+
+  /* ---- Violet: secondary data accent (charts, simulator B) ---- */
+  --violet-400: #a78bfa;
+  --violet-glow: rgba(167, 139, 250, 0.15);
+
+  /* ============================================================
+     Semantic aliases — use these in components, not the base scale
+     ============================================================ */
+
+  /* Surfaces & backgrounds */
+  --bg-app: var(--navy-900);
+  --bg-void: var(--navy-950);
+  --bg-raised: var(--navy-850);
+  --surface-card: var(--navy-800);
+  --surface-card-hover: var(--navy-750);
+  --surface-input: #0f1f35;       /* sunken field fill */
+  --surface-input-deep: #0a1628;  /* deepest field fill (selects) */
+  --surface-overlay: rgba(3, 7, 18, 0.8);  /* modal scrim (+ blur) */
+
+  /* Text */
+  --text-strong: var(--navy-200);
+  --text-body: var(--navy-200);
+  --text-secondary: var(--navy-300);
+  --text-muted: var(--navy-400);
+  --text-faint: var(--navy-500);
+  --text-on-accent: var(--navy-900);   /* dark text on sky buttons */
+
+  /* Borders */
+  --border-hairline: var(--navy-700);
+  --border-strong: var(--navy-600);
+  --border-accent: var(--sky-glow-strong);
+
+  /* Brand / action */
+  --accent: var(--sky-400);
+  --accent-strong: var(--sky-500);
+  --accent-tint: var(--sky-glow);
+  --accent-tint-border: var(--sky-glow-strong);
+
+  /* Status (calm semantics) */
+  --positive: var(--emerald-400);
+  --positive-tint: var(--emerald-glow);
+  --positive-tint-border: var(--emerald-glow-strong);
+  --attention: var(--amber-400);
+  --attention-tint: var(--amber-glow);
+  --attention-tint-border: var(--amber-glow-strong);
+
+  /* Data viz */
+  --data-1: var(--sky-400);
+  --data-2: var(--emerald-400);
+  --data-3: var(--amber-400);
+  --data-4: var(--violet-400);
+}

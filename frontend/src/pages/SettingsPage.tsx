@@ -6,6 +6,9 @@ import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { Badge } from "../components/ui/Badge";
+import { Eyebrow, Numeral } from "../components/ui/Stat";
+import { AppHeader } from "../components/ui/AppChrome";
+import { Icon } from "../components/ui/Icon";
 import { theme } from "../theme";
 
 interface SfinStatus {
@@ -91,36 +94,25 @@ export function SettingsPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: theme.colors.bg }}>
-      <header
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "16px 20px",
-          borderBottom: `1px solid ${theme.colors.border}`,
-        }}
-      >
-        <h1
-          style={{
-            fontSize: "20px",
-            fontWeight: 700,
-            color: theme.colors.text,
-            letterSpacing: "-0.01em",
-          }}
-        >
-          Sovi
-        </h1>
+      <AppHeader>
         <Link
           to="/"
-          style={{ fontSize: "13px", color: theme.colors.textMuted }}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "6px",
+            fontSize: "13px",
+            color: theme.colors.textMuted,
+          }}
         >
-          ← Dashboard
+          <Icon name="arrowLeft" size={15} />
+          Dashboard
         </Link>
-      </header>
+      </AppHeader>
 
       <main
         style={{
-          padding: "24px 20px",
+          padding: "24px",
           maxWidth: "580px",
           margin: "0 auto",
           display: "flex",
@@ -130,18 +122,7 @@ export function SettingsPage() {
       >
         {/* Account */}
         <Card>
-          <p
-            style={{
-              fontSize: "12px",
-              fontWeight: 600,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-              color: theme.colors.textMuted,
-              marginBottom: "14px",
-            }}
-          >
-            Account
-          </p>
+          <Eyebrow style={{ marginBottom: "14px" }}>Account</Eyebrow>
           <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
             <div style={{ display: "flex", justifyContent: "space-between" }}>
               <span style={{ fontSize: "13px", color: theme.colors.textMuted }}>Email</span>
@@ -188,18 +169,7 @@ export function SettingsPage() {
 
         {/* SimpleFIN */}
         <Card>
-          <p
-            style={{
-              fontSize: "12px",
-              fontWeight: 600,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-              color: theme.colors.textMuted,
-              marginBottom: "14px",
-            }}
-          >
-            SimpleFIN connection
-          </p>
+          <Eyebrow style={{ marginBottom: "14px" }}>SimpleFIN connection</Eyebrow>
 
           {sfinStatus === null ? (
             <p style={{ color: theme.colors.textMuted, fontSize: "13px" }}>Loading…</p>
@@ -216,10 +186,12 @@ export function SettingsPage() {
               {sfinStatus.last_sync_at && (
                 <p style={{ fontSize: "12px", color: theme.colors.textMuted }}>
                   Last sync:{" "}
-                  {new Date(sfinStatus.last_sync_at).toLocaleString("en-US", {
-                    dateStyle: "medium",
-                    timeStyle: "short",
-                  })}
+                  <Numeral>
+                    {new Date(sfinStatus.last_sync_at).toLocaleString("en-US", {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    })}
+                  </Numeral>
                 </p>
               )}
               <Button

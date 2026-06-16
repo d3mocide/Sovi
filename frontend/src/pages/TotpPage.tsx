@@ -4,6 +4,7 @@ import { useAuth } from "../hooks/useAuth";
 import { Input } from "../components/ui/Input";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
+import { Logo } from "../components/ui/Logo";
 import { theme } from "../theme";
 
 export function TotpPage() {
@@ -76,21 +77,12 @@ export function TotpPage() {
         alignItems: "center",
         justifyContent: "center",
         padding: "24px",
-        background: theme.colors.bg,
+        background:
+          "radial-gradient(ellipse 80% 60% at 50% -10%, var(--sky-glow), transparent 70%), var(--bg-app)",
       }}
     >
       <div style={{ width: "100%", maxWidth: "400px" }}>
-        <h1
-          style={{
-            fontSize: "28px",
-            fontWeight: 700,
-            color: theme.colors.text,
-            letterSpacing: "-0.02em",
-            marginBottom: "8px",
-          }}
-        >
-          Sovi
-        </h1>
+        <Logo size={36} wordmarkSize={24} style={{ marginBottom: "16px" }} />
         <p style={{ color: theme.colors.textMuted, fontSize: "14px", marginBottom: "32px" }}>
           Two-factor authentication
         </p>
@@ -105,7 +97,7 @@ export function TotpPage() {
             </p>
             <div
               style={{
-                background: "#0a1628",
+                background: theme.colors.inputDeep,
                 border: `1px solid ${theme.colors.border}`,
                 borderRadius: theme.radius.sm,
                 padding: "10px 12px",
@@ -152,7 +144,13 @@ export function TotpPage() {
             onChange={(e) => handleCodeChange(e.target.value)}
             placeholder="000000"
             maxLength={6}
-            style={{ textAlign: "center", fontSize: "24px", letterSpacing: "0.2em" }}
+            style={{
+              textAlign: "center",
+              fontSize: "24px",
+              letterSpacing: "0.2em",
+              fontFamily: theme.fonts.mono,
+              fontVariantNumeric: "tabular-nums",
+            }}
           />
 
           {error && (
@@ -161,7 +159,7 @@ export function TotpPage() {
                 color: theme.colors.warning,
                 fontSize: "13px",
                 padding: "10px 14px",
-                background: "rgba(251,191,36,0.1)",
+                background: theme.colors.warningTint,
                 borderRadius: theme.radius.sm,
               }}
             >
