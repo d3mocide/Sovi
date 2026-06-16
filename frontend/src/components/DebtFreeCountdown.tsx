@@ -1,5 +1,7 @@
 import React from "react";
 import { Card } from "./ui/Card";
+import { StatBlock, Numeral } from "./ui/Stat";
+import { Icon } from "./ui/Icon";
 import { theme } from "../theme";
 
 interface DebtFreeCountdownProps {
@@ -42,46 +44,33 @@ export function DebtFreeCountdown({
   const months = Math.round(daysUntil / 30);
 
   return (
-    <Card>
-      <p
+    <Card
+      style={{
+        background: "linear-gradient(160deg, var(--surface-card), var(--bg-raised))",
+      }}
+    >
+      {/* The hero stat — mono 56px countdown, the signature moment. */}
+      <StatBlock label="Debt-free in" value={months} unit="months" size="xl" tone="accent" />
+      <div
         style={{
-          fontSize: "12px",
-          fontWeight: 600,
-          letterSpacing: "0.08em",
-          textTransform: "uppercase",
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          marginTop: "12px",
           color: theme.colors.textMuted,
-          marginBottom: "12px",
         }}
       >
-        Debt-free in
-      </p>
-      <div style={{ display: "flex", alignItems: "baseline", gap: "8px", marginBottom: "4px" }}>
-        <span
-          style={{
-            fontSize: "56px",
-            fontWeight: 700,
-            color: theme.colors.accent,
-            lineHeight: 1,
-          }}
-        >
-          {months}
-        </span>
-        <span style={{ fontSize: "20px", color: theme.colors.textMuted, fontWeight: 500 }}>
-          months
-        </span>
+        <Icon name="calendar" size={15} />
+        <Numeral style={{ fontSize: "14px" }}>{formatDate(debtFreeDate)}</Numeral>
       </div>
-      <p style={{ color: theme.colors.textMuted, fontSize: "14px", marginTop: "8px" }}>
-        {formatDate(debtFreeDate)}
-      </p>
       <p
         style={{
-          color: theme.colors.textMuted,
+          color: theme.colors.textFaint,
           fontSize: "13px",
           marginTop: "4px",
-          opacity: 0.7,
         }}
       >
-        {formatCurrency(totalDebt)} remaining
+        <Numeral>{formatCurrency(totalDebt)}</Numeral> remaining
       </p>
     </Card>
   );

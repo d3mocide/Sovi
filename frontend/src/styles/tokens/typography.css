@@ -1,0 +1,61 @@
+/* ============================================================
+   Sovi — Typography tokens (mirrors brand/tokens/typography.css)
+   Inter for UI/labels; JetBrains Mono for numerals, balances,
+   APRs, dates — anything financial reads as monospaced "data".
+   ============================================================ */
+
+:root {
+  /* Families */
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* Weights */
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* Type scale (px) */
+  --text-2xs: 10px;
+  --text-xs: 11px;
+  --text-sm: 13px;
+  --text-base: 14px;
+  --text-md: 15px;
+  --text-lg: 18px;
+  --text-xl: 20px;
+  --text-2xl: 28px;
+  --text-3xl: 32px;
+  --text-5xl: 56px;
+
+  /* Line heights */
+  --leading-none: 1;
+  --leading-tight: 1.2;
+  --leading-snug: 1.35;
+  --leading-normal: 1.55;
+
+  /* Letter spacing */
+  --tracking-tight: -0.02em;   /* large display numerals & wordmark */
+  --tracking-snug: -0.01em;    /* page titles */
+  --tracking-normal: 0;
+  --tracking-wide: 0.02em;     /* input labels */
+  --tracking-caps: 0.08em;     /* uppercase eyebrows */
+
+  /* Semantic roles */
+  --eyebrow: var(--weight-semibold) var(--text-xs)/var(--leading-tight) var(--font-sans);
+  --display-stat: var(--weight-bold) var(--text-5xl)/var(--leading-none) var(--font-mono);
+}
+
+/* Uppercase eyebrow label — the recurring "section caption" pattern */
+.sovi-eyebrow {
+  font: var(--eyebrow);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* Financial numerals render in mono with tight tracking */
+.sovi-numeral {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--tracking-tight);
+}

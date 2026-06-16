@@ -1,0 +1,51 @@
+/* ============================================================
+   Sovi — Spacing, radius, elevation, motion
+   (mirrors brand/tokens/spacing.css)
+   8px base grid. Soft-but-not-pill radii. Shadows are quiet —
+   depth comes from surface contrast, not heavy drop shadows.
+   ============================================================ */
+
+:root {
+  /* Spacing scale (4px base, 8px rhythm) */
+  --space-0: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;   /* default card padding */
+  --space-6: 24px;   /* page gutters */
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* Radii */
+  --radius-xs: 4px;
+  --radius-sm: 6px;    /* buttons, inputs, chips */
+  --radius-md: 12px;   /* cards, modals */
+  --radius-lg: 20px;   /* large feature panels */
+  --radius-pill: 999px;
+
+  /* Layout */
+  --content-max: 680px;    /* mobile-first column */
+  --desktop-max: 1280px;   /* desktop workspace */
+  --sidebar-w: 248px;
+  --hairline: 1px;
+
+  /* Elevation — quiet, cool-toned */
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.2);
+  --shadow-pop: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-modal: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.5);
+  --shadow-focus: 0 0 0 3px var(--sky-glow);
+  --glow-accent: 0 0 24px rgba(56, 189, 248, 0.18);
+
+  /* Backdrop blur (modals, sticky headers) */
+  --blur-overlay: blur(8px);
+
+  /* Motion — calm, no bounce. Quick UI feedback. */
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 0.15s;     /* hover / press */
+  --dur-base: 0.25s;
+  --dur-slow: 0.4s;      /* progress-bar fills */
+}

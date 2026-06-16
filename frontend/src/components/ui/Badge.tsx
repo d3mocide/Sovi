@@ -7,6 +7,10 @@ interface BadgeProps {
   style?: React.CSSProperties;
 }
 
+/**
+ * Sovi Badge — status pill. Tints at ~15% fill + ~30% border. Status is always
+ * color + word (never color alone, never emoji).
+ */
 export function Badge({ children, variant = "default", style }: BadgeProps) {
   const variantStyles: Record<string, React.CSSProperties> = {
     default: {
@@ -14,19 +18,19 @@ export function Badge({ children, variant = "default", style }: BadgeProps) {
       color: theme.colors.text,
     },
     accent: {
-      background: "rgba(56,189,248,0.15)",
+      background: theme.colors.accentTint,
       color: theme.colors.accent,
-      border: `1px solid rgba(56,189,248,0.3)`,
+      border: `1px solid ${theme.colors.accentTintBorder}`,
     },
     positive: {
-      background: "rgba(52,211,153,0.15)",
+      background: theme.colors.positiveTint,
       color: theme.colors.positive,
-      border: `1px solid rgba(52,211,153,0.3)`,
+      border: `1px solid ${theme.colors.positiveTintBorder}`,
     },
     warning: {
-      background: "rgba(251,191,36,0.15)",
+      background: theme.colors.warningTint,
       color: theme.colors.warning,
-      border: `1px solid rgba(251,191,36,0.3)`,
+      border: `1px solid ${theme.colors.warningTintBorder}`,
     },
     muted: {
       background: "rgba(148,163,184,0.1)",
@@ -40,7 +44,7 @@ export function Badge({ children, variant = "default", style }: BadgeProps) {
         display: "inline-flex",
         alignItems: "center",
         padding: "3px 10px",
-        borderRadius: "999px",
+        borderRadius: theme.radius.pill,
         fontSize: "12px",
         fontWeight: 500,
         ...variantStyles[variant],

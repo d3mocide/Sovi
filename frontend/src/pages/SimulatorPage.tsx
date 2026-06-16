@@ -1,11 +1,12 @@
 import React, { useState, useMemo } from "react";
-import { Link } from "react-router-dom";
 import { simulate, simulateSideBySide } from "@sovi/payoff";
 import type { Debt, Strategy } from "@sovi/payoff";
 import { useGamification } from "../hooks/useGamification";
 import { api } from "../api/client";
 import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
+import { Eyebrow, Numeral } from "../components/ui/Stat";
+import { AppHeader, TabNav } from "../components/ui/AppChrome";
 import { theme } from "../theme";
 
 type ViewStrategy = "avalanche" | "snowball" | "side-by-side";
@@ -109,65 +110,12 @@ export function SimulatorPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: theme.colors.bg }}>
-      {/* Header */}
-      <header
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "16px 20px",
-          borderBottom: `1px solid ${theme.colors.border}`,
-        }}
-      >
-        <h1
-          style={{
-            fontSize: "20px",
-            fontWeight: 700,
-            color: theme.colors.text,
-            letterSpacing: "-0.01em",
-          }}
-        >
-          Sovi
-        </h1>
-      </header>
-
-      {/* Nav */}
-      <nav
-        style={{
-          display: "flex",
-          borderBottom: `1px solid ${theme.colors.border}`,
-          padding: "0 20px",
-          overflowX: "auto",
-        }}
-      >
-        {[
-          { to: "/", label: "Dashboard" },
-          { to: "/accounts", label: "Accounts" },
-          { to: "/simulator", label: "Simulator" },
-        ].map((item) => (
-          <Link
-            key={item.to}
-            to={item.to}
-            style={{
-              padding: "12px 16px",
-              fontSize: "13px",
-              fontWeight: 500,
-              color: item.to === "/simulator" ? theme.colors.accent : theme.colors.textMuted,
-              borderBottom:
-                item.to === "/simulator"
-                  ? `2px solid ${theme.colors.accent}`
-                  : "2px solid transparent",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {item.label}
-          </Link>
-        ))}
-      </nav>
+      <AppHeader />
+      <TabNav />
 
       <main
         style={{
-          padding: "24px 20px",
+          padding: "24px",
           maxWidth: "680px",
           margin: "0 auto",
           display: "flex",
@@ -185,18 +133,7 @@ export function SimulatorPage() {
 
         {/* Controls */}
         <Card>
-          <p
-            style={{
-              fontSize: "12px",
-              fontWeight: 600,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-              color: theme.colors.textMuted,
-              marginBottom: "16px",
-            }}
-          >
-            Extra monthly payment
-          </p>
+          <Eyebrow style={{ marginBottom: "16px" }}>Extra monthly payment</Eyebrow>
 
           <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
             <input
@@ -217,40 +154,46 @@ export function SimulatorPage() {
                 onChange={(e) => handleInputChange(e.target.value)}
                 style={{
                   width: "80px",
-                  background: "#0a1628",
+                  background: theme.colors.inputDeep,
                   border: `1px solid ${theme.colors.border}`,
                   borderRadius: theme.radius.sm,
                   padding: "6px 10px",
                   color: theme.colors.text,
                   fontSize: "14px",
                   fontWeight: 600,
+                  fontFamily: theme.fonts.mono,
+                  fontVariantNumeric: "tabular-nums",
                 }}
               />
             </div>
           </div>
 
-          {/* Strategy toggle */}
+          {/* Strategy toggle (segmented control) */}
           <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-            {(["avalanche", "snowball", "side-by-side"] as ViewStrategy[]).map((s) => (
-              <button
-                key={s}
-                onClick={() => setStrategy(s)}
-                style={{
-                  padding: "7px 16px",
-                  fontSize: "13px",
-                  fontWeight: 500,
-                  borderRadius: theme.radius.sm,
-                  border: `1px solid ${strategy === s ? theme.colors.accent : theme.colors.border}`,
-                  background: strategy === s ? "rgba(56,189,248,0.12)" : "transparent",
-                  color: strategy === s ? theme.colors.accent : theme.colors.textMuted,
-                  cursor: "pointer",
-                  transition: "all 0.15s",
-                  textTransform: "capitalize",
-                }}
-              >
-                {s === "side-by-side" ? "Side-by-side" : s.charAt(0).toUpperCase() + s.slice(1)}
-              </button>
-            ))}
+            {(["avalanche", "snowball", "side-by-side"] as ViewStrategy[]).map((s) => {
+              const active = strategy === s;
+              return (
+                <button
+                  key={s}
+                  onClick={() => setStrategy(s)}
+                  style={{
+                    padding: "7px 16px",
+                    fontSize: "13px",
+                    fontWeight: 500,
+                    fontFamily: theme.fonts.sans,
+                    borderRadius: theme.radius.sm,
+                    border: `1px solid ${active ? theme.colors.accent : theme.colors.border}`,
+                    background: active ? theme.colors.accentTint : "transparent",
+                    color: active ? theme.colors.accent : theme.colors.textMuted,
+                    cursor: "pointer",
+                    transition: `all ${theme.motion.durFast} ${theme.motion.easeStandard}`,
+                    textTransform: "capitalize",
+                  }}
+                >
+                  {s === "side-by-side" ? "Side-by-side" : s.charAt(0).toUpperCase() + s.slice(1)}
+                </button>
+              );
+            })}
           </div>
         </Card>
 
@@ -259,61 +202,30 @@ export function SimulatorPage() {
           <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
               <Card style={{ padding: "16px" }}>
-                <p
-                  style={{
-                    fontSize: "11px",
-                    fontWeight: 600,
-                    letterSpacing: "0.08em",
-                    textTransform: "uppercase",
-                    color: theme.colors.textMuted,
-                    marginBottom: "8px",
-                  }}
-                >
-                  Debt-free date
-                </p>
-                <p style={{ fontSize: "18px", fontWeight: 700, color: theme.colors.accent }}>
+                <Eyebrow style={{ marginBottom: "8px" }}>Debt-free date</Eyebrow>
+                <Numeral as="p" style={{ fontSize: "18px", fontWeight: 700, color: theme.colors.accent }}>
                   {formatDate(singleResult.debtFreeDate)}
-                </p>
+                </Numeral>
               </Card>
 
               <Card style={{ padding: "16px" }}>
-                <p
-                  style={{
-                    fontSize: "11px",
-                    fontWeight: 600,
-                    letterSpacing: "0.08em",
-                    textTransform: "uppercase",
-                    color: theme.colors.textMuted,
-                    marginBottom: "8px",
-                  }}
-                >
-                  Total interest
-                </p>
-                <p style={{ fontSize: "18px", fontWeight: 700, color: theme.colors.text }}>
+                <Eyebrow style={{ marginBottom: "8px" }}>Total interest</Eyebrow>
+                <Numeral as="p" style={{ fontSize: "18px", fontWeight: 700, color: theme.colors.text }}>
                   {formatCurrency(singleResult.totalInterest)}
-                </p>
+                </Numeral>
               </Card>
             </div>
 
             {monthsSaved > 0 && (
               <Card style={{ padding: "16px" }}>
-                <p
-                  style={{
-                    fontSize: "11px",
-                    fontWeight: 600,
-                    letterSpacing: "0.08em",
-                    textTransform: "uppercase",
-                    color: theme.colors.textMuted,
-                    marginBottom: "8px",
-                  }}
-                >
-                  Saved vs minimums only
-                </p>
+                <Eyebrow style={{ marginBottom: "8px" }}>Saved vs minimums only</Eyebrow>
                 <p style={{ fontSize: "18px", fontWeight: 700, color: theme.colors.positive }}>
-                  {monthsSaved} months earlier &nbsp;·&nbsp;{" "}
-                  {formatCurrency(
-                    Math.max(0, (baseline?.totalInterest ?? 0) - singleResult.totalInterest)
-                  )}{" "}
+                  <Numeral>{monthsSaved}</Numeral> months earlier &nbsp;·&nbsp;{" "}
+                  <Numeral>
+                    {formatCurrency(
+                      Math.max(0, (baseline?.totalInterest ?? 0) - singleResult.totalInterest)
+                    )}
+                  </Numeral>{" "}
                   less interest
                 </p>
               </Card>
@@ -351,21 +263,10 @@ export function SimulatorPage() {
                 ] as const
               ).map(({ key, label, r }) => (
                 <Card key={key} style={{ padding: "16px" }}>
-                  <p
-                    style={{
-                      fontSize: "12px",
-                      fontWeight: 700,
-                      color: theme.colors.textMuted,
-                      marginBottom: "12px",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.06em",
-                    }}
-                  >
-                    {label}
-                  </p>
-                  <p style={{ fontSize: "15px", fontWeight: 600, color: theme.colors.accent }}>
+                  <Eyebrow style={{ marginBottom: "12px" }}>{label}</Eyebrow>
+                  <Numeral as="p" style={{ fontSize: "15px", fontWeight: 600, color: theme.colors.accent }}>
                     {formatDate(r.debtFreeDate)}
-                  </p>
+                  </Numeral>
                   <p
                     style={{
                       fontSize: "13px",
@@ -373,7 +274,7 @@ export function SimulatorPage() {
                       marginTop: "6px",
                     }}
                   >
-                    {formatCurrency(r.totalInterest)} interest
+                    <Numeral>{formatCurrency(r.totalInterest)}</Numeral> interest
                   </p>
                 </Card>
               ))}
@@ -389,11 +290,11 @@ export function SimulatorPage() {
                 >
                   Avalanche is{" "}
                   <span style={{ color: theme.colors.positive, fontWeight: 600 }}>
-                    {Math.abs(sideBySideResult.monthsDelta)} months faster
+                    <Numeral>{Math.abs(sideBySideResult.monthsDelta)}</Numeral> months faster
                   </span>{" "}
                   and saves{" "}
                   <span style={{ color: theme.colors.positive, fontWeight: 600 }}>
-                    {formatCurrency(Math.abs(sideBySideResult.interestDelta))}
+                    <Numeral>{formatCurrency(Math.abs(sideBySideResult.interestDelta))}</Numeral>
                   </span>{" "}
                   in interest vs snowball.
                 </p>

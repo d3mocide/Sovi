@@ -1,6 +1,7 @@
 import React from "react";
 import { Card } from "./ui/Card";
 import { ProgressBar } from "./ui/ProgressBar";
+import { Numeral } from "./ui/Stat";
 import { theme } from "../theme";
 import type { DebtProgress } from "../hooks/useGamification";
 
@@ -44,18 +45,27 @@ export function DebtProgressList({ debts }: DebtProgressListProps) {
                 {debt.name}
               </p>
               {debt.apr !== null && (
-                <p style={{ fontSize: "12px", color: theme.colors.textMuted, marginTop: "2px" }}>
+                <Numeral
+                  as="p"
+                  style={{ fontSize: "12px", color: theme.colors.textMuted, marginTop: "2px" }}
+                >
                   {debt.apr}% APR
-                </p>
+                </Numeral>
               )}
             </div>
             <div style={{ textAlign: "right" }}>
-              <p style={{ fontWeight: 600, fontSize: "15px", color: theme.colors.text }}>
+              <Numeral
+                as="p"
+                style={{ fontWeight: 600, fontSize: "15px", color: theme.colors.text }}
+              >
                 {formatCurrency(debt.current_balance)}
-              </p>
-              <p style={{ fontSize: "12px", color: theme.colors.positive, marginTop: "2px" }}>
+              </Numeral>
+              <Numeral
+                as="p"
+                style={{ fontSize: "12px", color: theme.colors.positive, marginTop: "2px" }}
+              >
                 {debt.progress_pct.toFixed(0)}% paid
-              </p>
+              </Numeral>
             </div>
           </div>
           <ProgressBar value={debt.progress_pct} color={theme.colors.positive} />
@@ -67,7 +77,7 @@ export function DebtProgressList({ debts }: DebtProgressListProps) {
                 marginTop: "8px",
               }}
             >
-              Payoff in ~{debt.payoff_month} months
+              Payoff in ~<Numeral>{debt.payoff_month}</Numeral> months
             </p>
           )}
         </Card>

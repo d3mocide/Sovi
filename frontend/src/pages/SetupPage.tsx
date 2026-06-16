@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { Input } from "../components/ui/Input";
 import { Button } from "../components/ui/Button";
+import { Logo } from "../components/ui/Logo";
 import { theme } from "../theme";
 
 export function SetupPage() {
@@ -55,23 +56,15 @@ export function SetupPage() {
         alignItems: "center",
         justifyContent: "center",
         padding: "24px",
-        background: theme.colors.bg,
+        background:
+          "radial-gradient(ellipse 80% 60% at 50% -10%, var(--sky-glow), transparent 70%), var(--bg-app)",
       }}
     >
       <div style={{ width: "100%", maxWidth: "420px" }}>
         <div style={{ marginBottom: "40px" }}>
-          <h1
-            style={{
-              fontSize: "28px",
-              fontWeight: 700,
-              color: theme.colors.text,
-              letterSpacing: "-0.02em",
-            }}
-          >
-            Sovi Setup
-          </h1>
-          <p style={{ color: theme.colors.textMuted, fontSize: "14px", marginTop: "6px" }}>
-            Welcome to Sovi! Create your Admin account to initialize the system.
+          <Logo size={40} wordmarkSize={28} />
+          <p style={{ color: theme.colors.textMuted, fontSize: "14px", marginTop: "14px" }}>
+            Set up your admin account to get started. Your data stays on your own hardware.
           </p>
         </div>
 
@@ -122,9 +115,9 @@ export function SetupPage() {
                 color: theme.colors.warning,
                 fontSize: "13px",
                 padding: "10px 14px",
-                background: "rgba(251,191,36,0.1)",
+                background: theme.colors.warningTint,
                 borderRadius: theme.radius.sm,
-                border: `1px solid rgba(251,191,36,0.2)`,
+                border: `1px solid ${theme.colors.warningTintBorder}`,
               }}
             >
               {error}

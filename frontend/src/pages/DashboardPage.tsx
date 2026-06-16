@@ -9,6 +9,9 @@ import { TrendChart } from "../components/TrendChart";
 import { StreakBadges } from "../components/StreakBadges";
 import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
+import { Eyebrow, StatBlock } from "../components/ui/Stat";
+import { Icon } from "../components/ui/Icon";
+import { AppHeader, TabNav } from "../components/ui/AppChrome";
 import { theme } from "../theme";
 
 function formatCurrency(n: number): string {
@@ -41,85 +44,31 @@ export function DashboardPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: theme.colors.bg }}>
-      {/* Header */}
-      <header
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "16px 20px",
-          borderBottom: `1px solid ${theme.colors.border}`,
-          position: "sticky",
-          top: 0,
-          background: theme.colors.bg,
-          zIndex: 10,
-        }}
-      >
-        <h1
+      <AppHeader>
+        <span style={{ fontSize: "13px", color: theme.colors.textMuted }}>{user?.email}</span>
+        <Link
+          to="/settings"
           style={{
-            fontSize: "20px",
-            fontWeight: 700,
-            color: theme.colors.text,
-            letterSpacing: "-0.01em",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "6px",
+            fontSize: "13px",
+            color: theme.colors.textMuted,
+            padding: "5px 10px",
+            border: `1px solid ${theme.colors.border}`,
+            borderRadius: theme.radius.sm,
           }}
         >
-          Sovi
-        </h1>
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <span style={{ fontSize: "13px", color: theme.colors.textMuted }}>
-            {user?.email}
-          </span>
-          <Link
-            to="/settings"
-            style={{
-              fontSize: "13px",
-              color: theme.colors.textMuted,
-              padding: "4px 10px",
-              border: `1px solid ${theme.colors.border}`,
-              borderRadius: theme.radius.sm,
-            }}
-          >
-            Settings
-          </Link>
-        </div>
-      </header>
+          <Icon name="settings" size={15} />
+          Settings
+        </Link>
+      </AppHeader>
 
-      {/* Nav */}
-      <nav
-        style={{
-          display: "flex",
-          gap: "0",
-          borderBottom: `1px solid ${theme.colors.border}`,
-          padding: "0 20px",
-          overflowX: "auto",
-        }}
-      >
-        {[
-          { to: "/", label: "Dashboard" },
-          { to: "/accounts", label: "Accounts" },
-          { to: "/simulator", label: "Simulator" },
-        ].map((item) => (
-          <Link
-            key={item.to}
-            to={item.to}
-            style={{
-              padding: "12px 16px",
-              fontSize: "13px",
-              fontWeight: 500,
-              color: item.to === "/" ? theme.colors.accent : theme.colors.textMuted,
-              borderBottom: item.to === "/" ? `2px solid ${theme.colors.accent}` : "2px solid transparent",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {item.label}
-          </Link>
-        ))}
-      </nav>
+      <TabNav />
 
-      {/* Content */}
       <main
         style={{
-          padding: "24px 20px",
+          padding: "24px",
           maxWidth: "680px",
           margin: "0 auto",
           display: "flex",
@@ -147,30 +96,14 @@ export function DashboardPage() {
 
             <DebtProgressList debts={data.debt_progress} />
 
-            {/* Interest saved */}
+            {/* Interest saved — eyebrow + big mono numeral. */}
             <Card>
-              <p
-                style={{
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase",
-                  color: theme.colors.textMuted,
-                  marginBottom: "8px",
-                }}
-              >
-                Interest saved vs minimums
-              </p>
-              <p
-                style={{
-                  fontSize: "32px",
-                  fontWeight: 700,
-                  color: theme.colors.positive,
-                  lineHeight: 1,
-                }}
-              >
-                {formatCurrency(Number(data.interest_saved))}
-              </p>
+              <StatBlock
+                label="Interest saved vs minimums"
+                value={formatCurrency(Number(data.interest_saved))}
+                size="md"
+                tone="positive"
+              />
             </Card>
 
             <TrendChart trend={data.trend} />
@@ -179,24 +112,20 @@ export function DashboardPage() {
 
             {/* Quick actions */}
             <Card>
-              <p
-                style={{
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase",
-                  color: theme.colors.textMuted,
-                  marginBottom: "14px",
-                }}
-              >
-                Quick actions
-              </p>
+              <Eyebrow style={{ marginBottom: "14px" }}>Quick actions</Eyebrow>
               <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
                 <Button
                   variant="secondary"
                   onClick={handleRefresh}
                   loading={refreshing}
                   size="sm"
+                  iconLeft={
+                    <Icon
+                      name="refresh"
+                      size={15}
+                      style={{ animation: refreshing ? "sovi-spin 0.9s linear infinite" : undefined }}
+                    />
+                  }
                 >
                   Refresh data
                 </Button>
@@ -205,15 +134,17 @@ export function DashboardPage() {
                   style={{
                     display: "inline-flex",
                     alignItems: "center",
+                    gap: "6px",
                     padding: "6px 12px",
                     fontSize: "13px",
                     fontWeight: 500,
                     color: theme.colors.accent,
-                    border: `1px solid rgba(56,189,248,0.3)`,
+                    border: `1px solid ${theme.colors.accentTintBorder}`,
                     borderRadius: theme.radius.sm,
-                    background: "rgba(56,189,248,0.08)",
+                    background: theme.colors.accentTint,
                   }}
                 >
+                  <Icon name="sliders" size={15} />
                   Open Simulator
                 </Link>
               </div>

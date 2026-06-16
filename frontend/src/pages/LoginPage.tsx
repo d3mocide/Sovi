@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { Input } from "../components/ui/Input";
 import { Button } from "../components/ui/Button";
+import { Logo } from "../components/ui/Logo";
+import { Icon } from "../components/ui/Icon";
 import { theme } from "../theme";
 
 export function LoginPage() {
@@ -41,22 +43,14 @@ export function LoginPage() {
         alignItems: "center",
         justifyContent: "center",
         padding: "24px",
-        background: theme.colors.bg,
+        background:
+          "radial-gradient(ellipse 80% 60% at 50% -10%, var(--sky-glow), transparent 70%), var(--bg-app)",
       }}
     >
       <div style={{ width: "100%", maxWidth: "380px" }}>
         <div style={{ marginBottom: "40px" }}>
-          <h1
-            style={{
-              fontSize: "28px",
-              fontWeight: 700,
-              color: theme.colors.text,
-              letterSpacing: "-0.02em",
-            }}
-          >
-            Sovi
-          </h1>
-          <p style={{ color: theme.colors.textMuted, fontSize: "14px", marginTop: "6px" }}>
+          <Logo size={40} wordmarkSize={28} />
+          <p style={{ color: theme.colors.textMuted, fontSize: "14px", marginTop: "14px" }}>
             Your numbers. Your stack. Your control.
           </p>
         </div>
@@ -88,9 +82,9 @@ export function LoginPage() {
                 color: theme.colors.warning,
                 fontSize: "13px",
                 padding: "10px 14px",
-                background: "rgba(251,191,36,0.1)",
+                background: theme.colors.warningTint,
                 borderRadius: theme.radius.sm,
-                border: `1px solid rgba(251,191,36,0.2)`,
+                border: `1px solid ${theme.colors.warningTintBorder}`,
               }}
             >
               {error}
@@ -101,6 +95,21 @@ export function LoginPage() {
             Sign in
           </Button>
         </form>
+
+        {/* Privacy through-line — calm reassurance, never a sales pitch. */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            marginTop: "28px",
+            color: theme.colors.textFaint,
+            fontSize: "12px",
+          }}
+        >
+          <Icon name="lock" size={14} />
+          Nothing leaves your network.
+        </div>
       </div>
     </div>
   );

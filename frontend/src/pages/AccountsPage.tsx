@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import { Card } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
+import { Numeral } from "../components/ui/Stat";
+import { AppHeader, TabNav } from "../components/ui/AppChrome";
 import { theme } from "../theme";
 
 interface Account {
@@ -188,65 +189,12 @@ export function AccountsPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: theme.colors.bg }}>
-      {/* Header */}
-      <header
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "16px 20px",
-          borderBottom: `1px solid ${theme.colors.border}`,
-        }}
-      >
-        <h1
-          style={{
-            fontSize: "20px",
-            fontWeight: 700,
-            color: theme.colors.text,
-            letterSpacing: "-0.01em",
-          }}
-        >
-          Sovi
-        </h1>
-      </header>
-
-      {/* Nav */}
-      <nav
-        style={{
-          display: "flex",
-          borderBottom: `1px solid ${theme.colors.border}`,
-          padding: "0 20px",
-          overflowX: "auto",
-        }}
-      >
-        {[
-          { to: "/", label: "Dashboard" },
-          { to: "/accounts", label: "Accounts" },
-          { to: "/simulator", label: "Simulator" },
-        ].map((item) => (
-          <Link
-            key={item.to}
-            to={item.to}
-            style={{
-              padding: "12px 16px",
-              fontSize: "13px",
-              fontWeight: 500,
-              color: item.to === "/accounts" ? theme.colors.accent : theme.colors.textMuted,
-              borderBottom:
-                item.to === "/accounts"
-                  ? `2px solid ${theme.colors.accent}`
-                  : "2px solid transparent",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {item.label}
-          </Link>
-        ))}
-      </nav>
+      <AppHeader />
+      <TabNav />
 
       <main
         style={{
-          padding: "24px 20px",
+          padding: "24px",
           maxWidth: "680px",
           margin: "0 auto",
           display: "flex",
@@ -306,7 +254,7 @@ export function AccountsPage() {
                       value={editType}
                       onChange={(e) => setEditType(e.target.value)}
                       style={{
-                        background: "#0a1628",
+                        background: theme.colors.inputDeep,
                         border: `1px solid ${theme.colors.border}`,
                         borderRadius: theme.radius.sm,
                         padding: "6px 10px",
@@ -380,9 +328,12 @@ export function AccountsPage() {
 
               <div style={{ textAlign: "right", flexShrink: 0 }}>
                 {account.latest_balance !== null && (
-                  <p style={{ fontWeight: 600, fontSize: "15px", color: theme.colors.text }}>
+                  <Numeral
+                    as="p"
+                    style={{ fontWeight: 600, fontSize: "15px", color: theme.colors.text }}
+                  >
                     {formatCurrency(account.latest_balance, account.currency)}
-                  </p>
+                  </Numeral>
                 )}
                 {editingId !== account.id && (
                   <Button
@@ -408,7 +359,7 @@ export function AccountsPage() {
             left: 0,
             right: 0,
             bottom: 0,
-            background: "rgba(3, 7, 18, 0.8)",
+            background: theme.colors.overlay,
             backdropFilter: "blur(8px)",
             display: "flex",
             alignItems: "center",
@@ -419,13 +370,13 @@ export function AccountsPage() {
         >
           <div
             style={{
-              background: "#0f172a",
+              background: theme.colors.bg,
               border: `1px solid ${theme.colors.border}`,
-              borderRadius: theme.radius.md || "12px",
+              borderRadius: theme.radius.md,
               width: "100%",
               maxWidth: "500px",
               padding: "24px",
-              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.5)",
+              boxShadow: theme.shadow.modal,
             }}
           >
             <h2
@@ -474,7 +425,7 @@ export function AccountsPage() {
                       value={minPaymentType}
                       onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setMinPaymentType(e.target.value as "fixed" | "percent")}
                       style={{
-                        background: "#0a1628",
+                        background: theme.colors.inputDeep,
                         border: `1px solid ${theme.colors.border}`,
                         borderRadius: theme.radius.sm,
                         padding: "8px 12px",
@@ -559,9 +510,9 @@ export function AccountsPage() {
                       color: theme.colors.warning,
                       fontSize: "13px",
                       padding: "10px 14px",
-                      background: "rgba(251,191,36,0.1)",
+                      background: theme.colors.warningTint,
                       borderRadius: theme.radius.sm,
-                      border: `1px solid rgba(251,191,36,0.2)`,
+                      border: `1px solid ${theme.colors.warningTintBorder}`,
                     }}
                   >
                     {metadataError}
