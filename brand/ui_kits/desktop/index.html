@@ -1,0 +1,152 @@
+<!-- @dsCard group="Desktop App" viewport="1320x840" name="Sovi Desktop — workspace" subtitle="Sidebar workspace: dashboard, accounts, simulator" -->
+<!-- @startingPoint section="Desktop" subtitle="Self-hosted debt workspace — login + dashboard + simulator" viewport="1320x840" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sovi — Desktop</title>
+<link rel="stylesheet" href="../../styles.css" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg-app); font-family: var(--font-sans); color: var(--text-body); }
+  @keyframes sovi-spin { to { transform: rotate(360deg); } }
+  input[type=range] { height: 4px; border-radius: 999px; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: var(--navy-700); border-radius: 999px; border: 2px solid var(--bg-app); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="../Icons.jsx" type="text/babel" data-presets="react"></script>
+<script src="data.js"></script>
+<script src="AreaChart.jsx" type="text/babel" data-presets="react"></script>
+<script src="Shell.jsx" type="text/babel" data-presets="react"></script>
+<script src="DashboardScreen.jsx" type="text/babel" data-presets="react"></script>
+<script src="AccountsScreen.jsx" type="text/babel" data-presets="react"></script>
+<script src="SimulatorScreen.jsx" type="text/babel" data-presets="react"></script>
+<script type="text/babel" data-presets="react">
+const { Card, Input, Button, Switch, Badge } = window.SoviDesignSystem_6076be;
+const { Icon } = window.SoviIcons;
+
+function Login({ onLogin }) {
+  return (
+    <div style={{ minHeight: "100vh", display: "grid", gridTemplateColumns: "1fr 1fr" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "40px" }}>
+        <div style={{ width: "100%", maxWidth: "360px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
+            <img src="../../assets/sovi-mark.svg" width="40" height="40" alt="" />
+            <span style={{ fontSize: "28px", fontWeight: 700, letterSpacing: "-0.02em", color: "var(--text-strong)" }}>Sovi</span>
+          </div>
+          <p style={{ color: "var(--text-muted)", fontSize: "14px", margin: "0 0 36px" }}>Your numbers. Your stack. Your control.</p>
+          <form onSubmit={(e) => { e.preventDefault(); onLogin(); }} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            <Input label="Email" type="email" defaultValue="alex@home.lan" />
+            <Input label="Password" type="password" defaultValue="············" />
+            <Button type="submit" size="lg" style={{ marginTop: "8px" }}>Sign in</Button>
+          </form>
+          <p style={{ display: "flex", alignItems: "center", gap: "7px", color: "var(--text-faint)", fontSize: "12px", marginTop: "28px" }}>
+            <Icon name="lock" size={14} /> Encrypted at rest · Self-hosted on your hardware
+          </p>
+        </div>
+      </div>
+      <div style={{
+        background: "linear-gradient(150deg, var(--bg-raised), var(--bg-void))",
+        borderLeft: "1px solid var(--border-hairline)", display: "flex", flexDirection: "column",
+        justifyContent: "center", padding: "56px", gap: "20px",
+      }}>
+        <Badge variant="positive" style={{ alignSelf: "flex-start" }}><Icon name="server" size={12} /> sovi.home.lan</Badge>
+        <p style={{ fontFamily: "var(--font-mono)", fontSize: "44px", fontWeight: 700, letterSpacing: "-0.02em", color: "var(--accent)", margin: 0, lineHeight: 1 }}>14<span style={{ fontSize: "20px", color: "var(--text-muted)", fontWeight: 500 }}> months to debt-free</span></p>
+        <p style={{ color: "var(--text-secondary)", fontSize: "15px", lineHeight: 1.6, maxWidth: "360px", margin: 0 }}>
+          Calm clarity, no guilt. Track every account, simulate payoff strategies, and watch the line fall — all without a single byte leaving your network.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function SettingsScreen() {
+  const d = window.SoviData;
+  const [twoFA, setTwoFA] = React.useState(true);
+  const [autoSync, setAutoSync] = React.useState(true);
+  const Row = ({ title, desc, children }) => (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 0", borderBottom: "1px solid var(--border-hairline)" }}>
+      <div><p style={{ margin: 0, fontSize: "14px", fontWeight: 600, color: "var(--text-strong)" }}>{title}</p>
+        <p style={{ margin: "3px 0 0", fontSize: "13px", color: "var(--text-muted)" }}>{desc}</p></div>
+      {children}
+    </div>
+  );
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "16px", maxWidth: "720px" }}>
+      <h2 style={{ margin: 0, fontSize: "18px", fontWeight: 600, color: "var(--text-strong)" }}>Settings</h2>
+      <Card>
+        <p className="sovi-eyebrow" style={{ margin: "0 0 4px", letterSpacing: "0.08em", textTransform: "uppercase", fontSize: "12px", fontWeight: 600, color: "var(--text-muted)" }}>Security</p>
+        <Row title="Require 2FA at login" desc="Time-based one-time codes (TOTP).">{<Switch checked={twoFA} onChange={setTwoFA} />}</Row>
+        <Row title="Auto-sync via SimpleFIN" desc="Pull balances every morning at 6am.">{<Switch checked={autoSync} onChange={setAutoSync} />}</Row>
+        <Row title="Host" desc={d.host.name + " · synced " + d.host.synced}>{<Badge variant="positive"><Icon name="server" size={12} /> Online</Badge>}</Row>
+      </Card>
+      <Card style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+        <Icon name="shield" size={22} style={{ color: "var(--positive)" }} />
+        <span style={{ fontSize: "13px", color: "var(--text-secondary)" }}>Sovi has no cloud and no telemetry. Your data is yours — export or delete it anytime.</span>
+      </Card>
+    </div>
+  );
+}
+
+function DebtModal({ account, onClose }) {
+  if (!account) return null;
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "var(--surface-overlay)", backdropFilter: "var(--blur-overlay)", display: "grid", placeItems: "center", zIndex: 100, padding: "20px" }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: "var(--bg-app)", border: "1px solid var(--border-hairline)", borderRadius: "var(--radius-md)", width: "100%", maxWidth: "520px", padding: "24px", boxShadow: "var(--shadow-modal)" }}>
+        <h2 style={{ margin: "0 0 4px", fontSize: "18px", fontWeight: 600, color: "var(--text-strong)" }}>Debt details: {account.name}</h2>
+        <p style={{ margin: "0 0 20px", fontSize: "13px", color: "var(--text-muted)" }}>Configure APR and payment terms for the payoff engine.</p>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "16px" }}>
+          <Input label="APR (%)" type="number" defaultValue={account.apr || "24.99"} />
+          <Input label="Min payment (%)" type="number" defaultValue="2.0" />
+          <Input label="Due day (1–31)" type="number" defaultValue="15" />
+          <Input label="Original principal ($)" type="number" defaultValue="6000" />
+        </div>
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px" }}>
+          <Button variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button variant="primary" onClick={onClose}>Save</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const [auth, setAuth] = React.useState(false);
+  const [nav, setNav] = React.useState("dashboard");
+  const [modal, setModal] = React.useState(null);
+  const [refreshing, setRefreshing] = React.useState(false);
+  const { Shell } = window.SoviShell;
+
+  if (!auth) return <Login onLogin={() => setAuth(true)} />;
+
+  const titles = { dashboard: "Dashboard", accounts: "Accounts", simulator: "Simulator", settings: "Settings" };
+  const onRefresh = () => { setRefreshing(true); setTimeout(() => setRefreshing(false), 1100); };
+
+  let screen;
+  if (nav === "dashboard") screen = <window.SoviDashboardScreen />;
+  else if (nav === "accounts") screen = <window.SoviAccountsScreen onOpen={setModal} />;
+  else if (nav === "simulator") screen = <window.SoviSimulatorScreen />;
+  else screen = <SettingsScreen />;
+
+  return (
+    <>
+      <Shell active={nav} onNav={setNav} title={titles[nav]} onRefresh={onRefresh} refreshing={refreshing}>
+        {screen}
+      </Shell>
+      <DebtModal account={modal} onClose={() => setModal(null)} />
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>

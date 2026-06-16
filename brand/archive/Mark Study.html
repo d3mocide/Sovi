@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sovi — Mark Study</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  html { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+  body {
+    margin: 0;
+    background: var(--bg-app, #0f172a);
+    color: var(--text-body, #e2e8f0);
+    font-family: var(--font-ui, Inter, system-ui, sans-serif);
+    line-height: 1.55;
+  }
+  /* Subtle radial wash, very restrained */
+  body::before {
+    content: "";
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(1100px 600px at 18% -8%, rgba(56,189,248,0.07), transparent 60%),
+      radial-gradient(900px 600px at 100% 0%, rgba(167,139,250,0.05), transparent 55%);
+    pointer-events: none; z-index: 0;
+  }
+  .wrap { position: relative; z-index: 1; max-width: 1080px; margin: 0 auto; padding: 0 40px; }
+
+  .eyebrow {
+    font-family: var(--font-mono, "JetBrains Mono", monospace);
+    font-size: 12px; font-weight: 600; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--text-muted, #94a3b8);
+    margin: 0 0 18px;
+  }
+  h1 { font-size: clamp(36px, 5.4vw, 60px); line-height: 1.04; letter-spacing: -0.03em; font-weight: 700; margin: 0 0 20px; text-wrap: balance; }
+  h2 { font-size: clamp(26px, 3.4vw, 38px); line-height: 1.1; letter-spacing: -0.022em; font-weight: 700; margin: 0 0 14px; text-wrap: balance; }
+  h3 { font-size: 19px; letter-spacing: -0.01em; font-weight: 650; margin: 0 0 8px; }
+  p { margin: 0 0 16px; color: var(--text-secondary, #cbd5e1); max-width: 64ch; }
+  .lede { font-size: clamp(18px, 2vw, 21px); color: var(--text-secondary, #cbd5e1); max-width: 60ch; }
+  strong { color: var(--text-strong, #e2e8f0); font-weight: 650; }
+  .mono { font-family: var(--font-mono, "JetBrains Mono", monospace); }
+
+  /* Section rhythm */
+  header.hero { padding: 120px 0 64px; }
+  section { padding: 60px 0; border-top: 1px solid var(--border-hairline, #334155); }
+  .section-head { display: flex; align-items: baseline; gap: 16px; margin-bottom: 36px; flex-wrap: wrap; }
+  .section-no { font-family: var(--font-mono, monospace); font-size: 13px; color: var(--accent, #38bdf8); font-weight: 600; letter-spacing: 0.08em; }
+
+  .meta-row { display: flex; gap: 28px; flex-wrap: wrap; margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--border-hairline,#334155); }
+  .meta { font-family: var(--font-mono, monospace); font-size: 12.5px; color: var(--text-muted,#94a3b8); }
+  .meta b { color: var(--text-secondary,#cbd5e1); font-weight: 600; }
+
+  .card {
+    background: var(--surface-card, #1e293b);
+    border: 1px solid var(--border-hairline, #334155);
+    border-radius: 12px;
+  }
+
+  /* Mark stage helpers */
+  .mk { --mk-structure: #38bdf8; --mk-accent: #34d399; --mk-hair: #334155; display: inline-flex; }
+  .mk svg { display: block; }
+  .stage {
+    display: flex; gap: 28px; flex-wrap: wrap; align-items: stretch;
+  }
+  .stage .panel {
+    flex: 1 1 240px; background: var(--surface-card,#1e293b); border: 1px solid var(--border-hairline,#334155);
+    border-radius: 16px; padding: 32px; display: flex; flex-direction: column; align-items: center; gap: 22px;
+  }
+  .panel .label { font-family: var(--font-mono,monospace); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-muted,#94a3b8); }
+  .panel .markbox { flex: 1; display: flex; align-items: center; justify-content: center; min-height: 130px; }
+
+  /* Diagnosis */
+  .diag-grid { display: grid; grid-template-columns: 360px 1fr; gap: 40px; align-items: center; }
+  @media (max-width: 820px){ .diag-grid { grid-template-columns: 1fr; } }
+  .diag-visual { background: var(--surface-card,#1e293b); border: 1px solid var(--border-hairline,#334155); border-radius: 16px; padding: 28px; }
+  .faults { list-style: none; padding: 0; margin: 0; display: grid; gap: 14px; }
+  .faults li { display: grid; grid-template-columns: 26px 1fr; gap: 14px; align-items: start; }
+  .faults .n { font-family: var(--font-mono,monospace); font-size: 12px; font-weight: 600; color: var(--attention,#fbbf24); border: 1px solid var(--amber-glow-strong, rgba(251,191,36,.3)); background: var(--attention-tint, rgba(251,191,36,.15)); border-radius: 6px; height: 24px; display: flex; align-items: center; justify-content: center; }
+  .faults h3 { margin: 0 0 2px; font-size: 16px; }
+  .faults p { margin: 0; font-size: 14.5px; max-width: 52ch; }
+
+  /* Principles */
+  .principles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; background: var(--border-hairline,#334155); border: 1px solid var(--border-hairline,#334155); border-radius: 14px; overflow: hidden; }
+  @media (max-width: 720px){ .principles { grid-template-columns: 1fr; } }
+  .principles .cell { background: var(--surface-card,#1e293b); padding: 26px 28px; }
+  .principles .k { font-family: var(--font-mono,monospace); font-size: 12px; color: var(--accent,#38bdf8); letter-spacing: 0.1em; margin-bottom: 10px; }
+  .principles p { margin: 0; font-size: 14.5px; }
+
+  /* Alternatives grid */
+  .alts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 22px; }
+  @media (max-width: 820px){ .alts { grid-template-columns: 1fr; } }
+  .alt { background: var(--surface-card,#1e293b); border: 1px solid var(--border-hairline,#334155); border-radius: 16px; padding: 26px; transition: border-color .15s ease, background .15s ease; }
+  .alt:hover { border-color: var(--border-strong,#475569); }
+  .alt-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+  .alt-head .idx { font-family: var(--font-mono,monospace); font-size: 12px; color: var(--text-muted,#94a3b8); }
+  .tag { font-family: var(--font-mono,monospace); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 9px; border-radius: 999px; border: 1px solid var(--accent-tint-border, rgba(56,189,248,.3)); color: var(--accent,#38bdf8); background: var(--accent-tint, rgba(56,189,248,.15)); white-space: nowrap; }
+  .tag.geo { color: var(--data-4,#a78bfa); border-color: var(--violet-glow, rgba(167,139,250,.3)); background: rgba(167,139,250,.13); }
+  .alt-marks { display: flex; gap: 18px; align-items: center; margin-bottom: 20px; }
+  .alt-marks .free { width: 96px; height: 96px; display: flex; align-items: center; justify-content: center; background: var(--bg-raised,#131d33); border-radius: 12px; border: 1px solid var(--border-hairline,#334155); }
+  .alt h3 { margin: 0 0 6px; }
+  .alt .concept { font-size: 14.5px; color: var(--text-secondary,#cbd5e1); margin: 0 0 12px; }
+  .alt .balance { font-family: var(--font-mono,monospace); font-size: 12px; color: var(--positive,#34d399); display: flex; align-items: center; gap: 8px; margin: 0; }
+  .alt .balance::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--positive,#34d399); }
+
+  /* Test bench */
+  .bench-chips { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 28px; }
+  .chip { display: inline-flex; align-items: center; gap: 10px; padding: 9px 14px 9px 10px; border-radius: 10px; border: 1px solid var(--border-hairline,#334155); background: var(--surface-card,#1e293b); color: var(--text-secondary,#cbd5e1); cursor: pointer; font-family: inherit; font-size: 14px; transition: all .15s ease; }
+  .chip:hover { border-color: var(--border-strong,#475569); background: var(--surface-card-hover,#263348); }
+  .chip[aria-pressed="true"] { border-color: var(--accent,#38bdf8); background: var(--accent-tint, rgba(56,189,248,.15)); color: var(--text-strong,#e2e8f0); }
+  .chip .swatch { width: 26px; height: 26px; border-radius: 6px; background: var(--bg-raised,#131d33); display: flex; align-items: center; justify-content: center; }
+
+  .bench { display: grid; grid-template-columns: repeat(12, 1fr); gap: 18px; }
+  .bench .tile { background: var(--surface-card,#1e293b); border: 1px solid var(--border-hairline,#334155); border-radius: 16px; padding: 26px; display: flex; flex-direction: column; gap: 18px; }
+  .bench .tile .cap { font-family: var(--font-mono,monospace); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted,#94a3b8); }
+  .bench .row { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+  .span-5 { grid-column: span 5; } .span-7 { grid-column: span 7; } .span-6 { grid-column: span 6; } .span-12 { grid-column: span 12; }
+  @media (max-width: 860px){ .bench .tile { grid-column: span 12 !important; } }
+
+  .lockup { display: inline-flex; align-items: center; gap: 16px; }
+  .lockup .word { font-weight: 700; letter-spacing: -0.02em; color: var(--text-strong,#e2e8f0); }
+  .on-light { background: #f1f5f9; border-radius: 12px; padding: 20px 24px; display: inline-flex; align-items: center; gap: 16px; }
+  .on-light .word { color: #1e293b; }
+  .fav { display: flex; align-items: flex-end; gap: 20px; }
+  .fav figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .fav figcaption { font-family: var(--font-mono,monospace); font-size: 11px; color: var(--text-muted,#94a3b8); }
+
+  /* Recommendation */
+  .rec { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+  @media (max-width: 720px){ .rec { grid-template-columns: 1fr; } }
+  .rec .pick { background: linear-gradient(160deg, var(--surface-card,#1e293b), var(--bg-raised,#131d33)); border: 1px solid var(--accent-tint-border, rgba(56,189,248,.3)); border-radius: 16px; padding: 28px; }
+  .rec .pick .rank { font-family: var(--font-mono,monospace); font-size: 12px; color: var(--accent,#38bdf8); letter-spacing: 0.1em; margin-bottom: 16px; }
+  .rec .pick .topline { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
+  .open { margin-top: 28px; display: grid; gap: 12px; }
+  .open .q { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: start; font-size: 14.5px; color: var(--text-secondary,#cbd5e1); }
+  .open .q .mono { color: var(--data-4,#a78bfa); }
+  footer { padding: 64px 0 96px; color: var(--text-muted,#94a3b8); font-family: var(--font-mono,monospace); font-size: 12.5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <p class="eyebrow">Brand · Mark Study</p>
+    <h1>Rebalancing the Sovi mark</h1>
+    <p class="lede">The current mark tells the right story — debt falling to zero — but it leans left and reads thin. This study diagnoses why, then surfaces six balanced alternatives drawn from Sovi's core promise: <strong>privacy, ownership, control</strong>.</p>
+    <div class="meta-row">
+      <span class="meta"><b>Subject</b> &nbsp;sovi-mark.svg</span>
+      <span class="meta"><b>Brief</b> &nbsp;Privacy / ownership · geometric abstract</span>
+      <span class="meta"><b>Treatments</b> &nbsp;Freestanding + rounded tile</span>
+      <span class="meta"><b>Date</b> &nbsp;Jun 2026</span>
+    </div>
+  </header>
+
+  <!-- 01 — INCUMBENT -->
+  <section>
+    <div class="section-head">
+      <span class="section-no">01</span>
+      <h2>The incumbent</h2>
+    </div>
+    <p>Today's mark is a single sky stroke that descends and flattens onto a baseline, ending in an emerald dot — the product's whole thesis (<span class="mono">debt → zero</span>) compressed into one line, set on a rounded navy app-tile.</p>
+    <div class="stage" style="margin-top:28px">
+      <div class="panel">
+        <div class="markbox" id="inc-tile"></div>
+        <span class="label">On tile · 96px</span>
+      </div>
+      <div class="panel">
+        <div class="markbox" id="inc-free"></div>
+        <span class="label">Freestanding · 96px</span>
+      </div>
+      <div class="panel">
+        <div class="markbox" id="inc-lock"></div>
+        <span class="label">Wordmark lockup</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 02 — DIAGNOSIS -->
+  <section>
+    <div class="section-head">
+      <span class="section-no">02</span>
+      <h2>Diagnosis</h2>
+    </div>
+    <div class="diag-grid">
+      <div class="diag-visual">
+        <div id="diag-mark" style="display:flex;justify-content:center"></div>
+        <p class="mono" style="font-size:12px;color:var(--text-muted);text-align:center;margin:18px 0 0">optical mass pools left of the geometric center</p>
+      </div>
+      <ul class="faults">
+        <li>
+          <span class="n">1</span>
+          <div>
+            <h3>Weighted to the left</h3>
+            <p>The stroke is dense and tall at the left and trails thin to the right. Its optical center sits well left of middle, so on a square tile the mark looks like it's sliding off-axis.</p>
+          </div>
+        </li>
+        <li>
+          <span class="n">2</span>
+          <div>
+            <h3>Reads flat &amp; thin</h3>
+            <p>One 3px hairline on a dark field has almost no presence. There's no solid silhouette to anchor it — the mark recedes instead of holding the tile.</p>
+          </div>
+        </li>
+        <li>
+          <span class="n">3</span>
+          <div>
+            <h3>Fragile when small</h3>
+            <p>At favicon sizes the curve collapses into an ambiguous squiggle. The emerald dot — the only "event" — is the first thing to disappear.</p>
+          </div>
+        </li>
+        <li>
+          <span class="n">4</span>
+          <div>
+            <h3>Story without a symbol</h3>
+            <p>"Debt to zero" is legible only once explained, and it says nothing about Sovi's louder promise: that your data is <em>yours</em> and stays home.</p>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 03 — DIRECTION -->
+  <section>
+    <div class="section-head">
+      <span class="section-no">03</span>
+      <h2>What the new mark must do</h2>
+    </div>
+    <div class="principles">
+      <div class="cell"><div class="k">BALANCED</div><p>Optical weight centered on the vertical axis. Symmetric or center-anchored so it sits square in the tile.</p></div>
+      <div class="cell"><div class="k">PRESENT</div><p>A solid silhouette, not a stray line. It should hold a dark field and survive monochrome.</p></div>
+      <div class="cell"><div class="k">MEANINGFUL</div><p>Carry the brand's core promise — privacy, ownership, the self-hosted stack — not only the payoff metaphor.</p></div>
+      <div class="cell"><div class="k">RESILIENT</div><p>Legible at 16px, pairs cleanly with the Sovi wordmark, and keeps emerald reserved for the single "settled / owned" note.</p></div>
+    </div>
+  </section>
+
+  <!-- 04 — ALTERNATIVES -->
+  <section>
+    <div class="section-head">
+      <span class="section-no">04</span>
+      <h2>Six directions</h2>
+    </div>
+    <p style="margin-bottom:32px">Each is built from simple geometry, centered for balance, and shown freestanding and on the navy tile. Sky carries structure; emerald is reserved for the single owned / settled core.</p>
+    <div class="alts" id="alts"></div>
+  </section>
+
+  <!-- 05 — TEST BENCH -->
+  <section>
+    <div class="section-head">
+      <span class="section-no">05</span>
+      <h2>Test bench</h2>
+    </div>
+    <p style="margin-bottom:28px">Pick a direction to prove it against the real constraints — wordmark lockup, favicon sizes, pure monochrome, and a light background.</p>
+    <div class="bench-chips" id="chips"></div>
+    <div class="bench" id="bench"></div>
+  </section>
+
+  <!-- 06 — RECOMMENDATION -->
+  <section>
+    <div class="section-head">
+      <span class="section-no">06</span>
+      <h2>Recommendation</h2>
+    </div>
+    <div class="rec">
+      <div class="pick">
+        <div class="rank">SHORTLIST · 01</div>
+        <div class="topline">
+          <div id="rec-a" style="display:flex"></div>
+          <div><h3 style="margin:0">Vault</h3><span class="mono" style="font-size:12px;color:var(--text-muted)">Privacy · ownership</span></div>
+        </div>
+        <p style="font-size:14.5px;margin:0">The clearest read of "your data, held safe." Radially balanced, unmistakable at 16px, and the emerald core gives Sovi one warm, ownable focal point. Strongest pairing with the wordmark.</p>
+      </div>
+      <div class="pick">
+        <div class="rank">SHORTLIST · 02</div>
+        <div class="topline">
+          <div id="rec-b" style="display:flex"></div>
+          <div><h3 style="margin:0">Ledger</h3><span class="mono" style="font-size:12px;color:var(--text-muted)">Stack · payoff</span></div>
+        </div>
+        <p style="font-size:14.5px;margin:0">Keeps the "debt shrinking to zero" idea but center-weighted, and doubles as the self-hosted "stack." Solid bars give it presence the original line never had.</p>
+      </div>
+    </div>
+    <div class="open">
+      <div class="q"><span class="mono">?</span><div><strong>Palette shift</strong> — you said you're open to one. Worth testing the core dot in <span class="mono">violet</span> on a finalist to differentiate from the in-app emerald "progress" meaning?</div></div>
+      <div class="q"><span class="mono">?</span><div><strong>Wordmark</strong> — current is Inter 700 at <span class="mono">-0.02em</span>. The lockups below preview it as-is; a small optical-tracking tweak is on the table if we want the mark to carry more of the lockup.</div></div>
+      <div class="q"><span class="mono">?</span><div><strong>Next step</strong> — name a finalist (or two) and I'll refine the geometry, lock the clearspace, and produce production SVGs + a favicon set.</div></div>
+    </div>
+  </section>
+
+  <footer>
+    Sovi Design System · Mark Study · exploratory — not yet canonical
+  </footer>
+
+</div>
+
+<script>
+/* ---------- Mark geometry (64×64 viewBox). Structure = var(--mk-structure), accent = var(--mk-accent) ---------- */
+const MARKS = {
+  current: {
+    name: "Current", tag: "Incumbent", geo: false,
+    concept: "A descending line settling onto a baseline.",
+    balance: "",
+    svg: `
+      <path d="M16 22 C 24 22, 26 40, 34 44 C 40 47, 44 46, 48 46" stroke="var(--mk-structure)" stroke-width="3" stroke-linecap="round" fill="none"/>
+      <line x1="16" y1="46" x2="48" y2="46" stroke="var(--mk-hair)" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="48" cy="46" r="3.5" fill="var(--mk-accent)"/>`
+  },
+  vault: {
+    name: "Vault", tag: "Privacy", geo: false,
+    concept: "A rounded enclosure around a single owned asset — your data, held safe at the center.",
+    balance: "Radially symmetric",
+    svg: `
+      <rect x="13" y="13" width="38" height="38" rx="11" fill="none" stroke="var(--mk-structure)" stroke-width="4"/>
+      <rect x="25" y="25" width="14" height="14" rx="2.5" transform="rotate(45 32 32)" fill="var(--mk-accent)"/>`
+  },
+  shield: {
+    name: "Shield", tag: "Privacy", geo: false,
+    concept: "The plainest privacy signal, with the protected core kept dead-center.",
+    balance: "Mirror-symmetric",
+    svg: `
+      <path d="M18 16 H46 V29 C46 40 40 46 32 50 C24 46 18 40 18 29 Z" fill="none" stroke="var(--mk-structure)" stroke-width="4" stroke-linejoin="round"/>
+      <circle cx="32" cy="30" r="4" fill="var(--mk-accent)"/>`
+  },
+  ledger: {
+    name: "Ledger", tag: "Ownership", geo: false,
+    concept: "Stacked, centered bars stepping down to an emerald baseline — the payoff story, and your self-hosted stack.",
+    balance: "Center-anchored",
+    svg: `
+      <rect x="14" y="17" width="36" height="8" rx="4" fill="var(--mk-structure)"/>
+      <rect x="18" y="30" width="28" height="8" rx="4" fill="var(--mk-structure)"/>
+      <rect x="22" y="43" width="20" height="8" rx="4" fill="var(--mk-accent)"/>`
+  },
+  keep: {
+    name: "Keep", tag: "Ownership", geo: false,
+    concept: "A home with its data held inside — local-first, running on your own hardware.",
+    balance: "Mirror-symmetric",
+    svg: `
+      <path d="M15 30 L32 15 L49 30 V46 Q49 49 46 49 H18 Q15 49 15 46 Z" fill="none" stroke="var(--mk-structure)" stroke-width="4" stroke-linejoin="round"/>
+      <rect x="27" y="36" width="10" height="13" rx="1.5" fill="var(--mk-accent)"/>`
+  },
+  aperture: {
+    name: "Aperture", tag: "Geometric", geo: true,
+    concept: "Square and diamond interlocked around a node — an abstract, contained instrument.",
+    balance: "8-fold symmetric",
+    svg: `
+      <rect x="18" y="18" width="28" height="28" rx="3" fill="none" stroke="var(--mk-structure)" stroke-width="3.5"/>
+      <path d="M32 12 L52 32 L32 52 L12 32 Z" fill="none" stroke="var(--mk-structure)" stroke-width="3.5" stroke-linejoin="round"/>
+      <circle cx="32" cy="32" r="3.5" fill="var(--mk-accent)"/>`
+  },
+  dial: {
+    name: "Dial", tag: "Geometric", geo: true,
+    concept: "The original 'to zero' idea made radial — a gauge with its indicator settled at the bottom.",
+    balance: "Axis-symmetric",
+    svg: `
+      <path d="M21.7 46.7 A18 18 0 1 1 42.3 46.7" fill="none" stroke="var(--mk-structure)" stroke-width="4" stroke-linecap="round"/>
+      <circle cx="32" cy="50" r="3.7" fill="var(--mk-accent)"/>`
+  }
+};
+
+const ALT_ORDER = ["vault","shield","ledger","keep","aperture","dial"];
+
+const THEMES = {
+  dark:  { structure: "#38bdf8", accent: "#34d399", hair: "#334155" },
+  mono:  { structure: "#e2e8f0", accent: "#e2e8f0", hair: "#64748b" },
+  light: { structure: "#1e293b", accent: "#059669", hair: "#cbd5e1" }
+};
+
+/* Build an <svg>. opts: {size, tile, theme} */
+function markSVG(id, opts = {}) {
+  const { size = 64, tile = false, theme = "dark" } = opts;
+  const t = THEMES[theme] || THEMES.dark;
+  const m = MARKS[id];
+  const tileRect = tile
+    ? `<rect x="1" y="1" width="62" height="62" rx="16" fill="#0f172a" stroke="#334155" stroke-width="1.5"/>`
+    : "";
+  // On a tile we always use the dark on-brand theme so the icon stays sky/emerald.
+  const th = tile ? THEMES.dark : t;
+  return `<span class="mk" style="--mk-structure:${th.structure};--mk-accent:${th.accent};--mk-hair:${th.hair}">
+    <svg width="${size}" height="${size}" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Sovi ${m.name} mark">
+      ${tileRect}${m.svg}
+    </svg></span>`;
+}
+
+function lockup(id, { size = 44, word = 32, theme = "dark", tile = false } = {}) {
+  const wordColor = theme === "light" ? "#1e293b" : "#e2e8f0";
+  return `<span class="lockup"><span style="display:flex">${markSVG(id, { size, theme, tile })}</span>
+    <span class="word" style="font-size:${word}px;color:${wordColor}">Sovi</span></span>`;
+}
+
+/* ---------- Render incumbent ---------- */
+document.getElementById('inc-tile').innerHTML = markSVG('current', { size: 96, tile: true });
+document.getElementById('inc-free').innerHTML = markSVG('current', { size: 96 });
+document.getElementById('inc-lock').innerHTML = lockup('current', { size: 56, word: 30 });
+
+/* ---------- Diagnosis annotated mark ---------- */
+document.getElementById('diag-mark').innerHTML = `
+  <svg width="220" height="220" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-label="Balance analysis">
+    <rect x="1" y="1" width="62" height="62" rx="16" fill="#0f172a" stroke="#334155" stroke-width="1.5"/>
+    <!-- geometric center -->
+    <line x1="32" y1="6" x2="32" y2="58" stroke="#475569" stroke-width="0.8" stroke-dasharray="2 3"/>
+    <!-- the mark -->
+    <path d="M16 22 C 24 22, 26 40, 34 44 C 40 47, 44 46, 48 46" stroke="#38bdf8" stroke-width="3" stroke-linecap="round" fill="none"/>
+    <line x1="16" y1="46" x2="48" y2="46" stroke="#334155" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="48" cy="46" r="3.5" fill="#34d399"/>
+    <!-- optical center of mass, offset left -->
+    <circle cx="25.5" cy="34" r="2.6" fill="none" stroke="#fbbf24" stroke-width="1.4"/>
+    <line x1="25.5" y1="34" x2="31" y2="34" stroke="#fbbf24" stroke-width="1.2" stroke-dasharray="1.5 2"/>
+    <path d="M30 32.2 L32 34 L30 35.8" fill="none" stroke="#fbbf24" stroke-width="1.2"/>
+  </svg>`;
+
+/* ---------- Alternatives grid ---------- */
+document.getElementById('alts').innerHTML = ALT_ORDER.map((id, i) => {
+  const m = MARKS[id];
+  return `<div class="alt">
+    <div class="alt-head">
+      <span class="idx mono">0${i + 1}</span>
+      <span class="tag ${m.geo ? 'geo' : ''}">${m.tag}</span>
+    </div>
+    <div class="alt-marks">
+      ${markSVG(id, { size: 84, tile: true })}
+      <div class="free">${markSVG(id, { size: 60 })}</div>
+    </div>
+    <h3>${m.name}</h3>
+    <p class="concept">${m.concept}</p>
+    <p class="balance">${m.balance}</p>
+  </div>`;
+}).join('');
+
+/* ---------- Recommendation thumbnails ---------- */
+document.getElementById('rec-a').innerHTML = markSVG('vault', { size: 56, tile: true });
+document.getElementById('rec-b').innerHTML = markSVG('ledger', { size: 56, tile: true });
+
+/* ---------- Test bench ---------- */
+let selected = 'vault';
+
+document.getElementById('chips').innerHTML = ALT_ORDER.map(id => {
+  const m = MARKS[id];
+  return `<button class="chip" data-id="${id}" aria-pressed="${id === selected}">
+    <span class="swatch">${markSVG(id, { size: 22 })}</span>${m.name}</button>`;
+}).join('');
+
+function renderBench() {
+  const id = selected;
+  const m = MARKS[id];
+  document.getElementById('bench').innerHTML = `
+    <div class="tile span-5">
+      <span class="cap">On tile · freestanding</span>
+      <div class="row" style="justify-content:center;flex:1;gap:28px">
+        ${markSVG(id, { size: 104, tile: true })}
+        ${markSVG(id, { size: 104 })}
+      </div>
+    </div>
+    <div class="tile span-7">
+      <span class="cap">Wordmark lockup</span>
+      <div class="row" style="flex:1;align-items:center;gap:32px">
+        ${lockup(id, { size: 52, word: 34 })}
+        ${lockup(id, { size: 40, word: 26, tile: true })}
+      </div>
+    </div>
+    <div class="tile span-6">
+      <span class="cap">Favicon · small sizes</span>
+      <div class="fav" style="flex:1">
+        <figure>${markSVG(id, { size: 48, tile: true })}<figcaption>48</figcaption></figure>
+        <figure>${markSVG(id, { size: 32, tile: true })}<figcaption>32</figcaption></figure>
+        <figure>${markSVG(id, { size: 24, tile: true })}<figcaption>24</figcaption></figure>
+        <figure>${markSVG(id, { size: 16, tile: true })}<figcaption>16</figcaption></figure>
+      </div>
+    </div>
+    <div class="tile span-6">
+      <span class="cap">Monochrome &amp; light ground</span>
+      <div class="row" style="flex:1;align-items:center;gap:24px">
+        ${markSVG(id, { size: 64, theme: 'mono' })}
+        <div class="on-light">${lockup(id, { size: 44, word: 28, theme: 'light' })}</div>
+      </div>
+    </div>`;
+}
+renderBench();
+
+document.getElementById('chips').addEventListener('click', (e) => {
+  const btn = e.target.closest('.chip');
+  if (!btn) return;
+  selected = btn.dataset.id;
+  document.querySelectorAll('#chips .chip').forEach(c => c.setAttribute('aria-pressed', c.dataset.id === selected));
+  renderBench();
+});
+</script>
+</body>
+</html>

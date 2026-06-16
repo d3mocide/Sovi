@@ -1,0 +1,7 @@
+/* Sovi webfonts — Inter (UI) + JetBrains Mono (numerals/data).
+   Both are the authentic fonts declared in the Sovi codebase (theme.ts).
+   Loaded from Google Fonts CDN — not self-hosted binaries. If you need
+   offline/self-hosted copies, drop the .woff2 files in assets/fonts and
+   replace these imports with @font-face rules. */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');

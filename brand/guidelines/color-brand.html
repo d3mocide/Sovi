@@ -1,0 +1,20 @@
+<!-- @dsCard group="Colors" viewport="700x150" name="Brand — Sky accent" subtitle="Primary action & brand color, with tints" -->
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8" /><link rel="stylesheet" href="../styles.css" />
+<style>
+  body { margin: 0; background: var(--bg-app); font-family: var(--font-sans); padding: 20px; }
+  .row { display: flex; gap: 10px; }
+  .sw { flex: 1; height: 96px; border-radius: var(--radius-sm); display: flex; flex-direction: column; justify-content: flex-end; padding: 10px; box-sizing: border-box; border: 1px solid rgba(255,255,255,0.06); }
+  .name { font-size: 11px; font-weight: 600; color: #fff; }
+  .hex { font-family: var(--font-mono); font-size: 10px; color: rgba(255,255,255,0.7); margin-top: 2px; }
+  .dark .name, .dark .hex { color: var(--text-strong); }
+</style></head>
+<body>
+<div class="row">
+  <div class="sw" style="background: var(--sky-500)"><span class="name">sky-500</span><span class="hex">#0ea5e9</span></div>
+  <div class="sw" style="background: var(--sky-400)"><span class="name" style="color:#0f172a">accent · sky-400</span><span class="hex" style="color:rgba(15,23,42,.6)">#38bdf8</span></div>
+  <div class="sw" style="background: var(--sky-300)"><span class="name" style="color:#0f172a">sky-300</span><span class="hex" style="color:rgba(15,23,42,.6)">#7dd3fc</span></div>
+  <div class="sw dark" style="background: var(--accent-tint); border-color: var(--accent-tint-border)"><span class="name">tint 15%</span><span class="hex">accent-tint</span></div>
+</div>
+</body></html>

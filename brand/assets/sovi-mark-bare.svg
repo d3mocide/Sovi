@@ -1,0 +1,5 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Sovi mark">
+  <path d="M32 12 L52 32 L32 52 L12 32 Z" fill="none" stroke="#38bdf8" stroke-width="2.5" stroke-linejoin="round"></path>
+  <rect x="18" y="18" width="28" height="28" rx="3" fill="none" stroke="#38bdf8" stroke-width="1.5"></rect>
+  <circle cx="32" cy="32" r="2.6" fill="#34d399"></circle>
+</svg>

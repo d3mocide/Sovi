@@ -1,0 +1,61 @@
+/* ============================================================
+   Sovi — Typography tokens
+   Inter for UI/labels; JetBrains Mono for numerals, balances,
+   APRs, dates — anything financial reads as monospaced "data".
+   ============================================================ */
+
+:root {
+  /* Families */
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* Weights */
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* Type scale (px) — UI density, mobile-first */
+  --text-2xs: 10px;   /* micro-labels, "Best: N" */
+  --text-xs: 11px;    /* eyebrow caps, axis ticks */
+  --text-sm: 13px;    /* secondary UI, nav, table cells */
+  --text-base: 14px;  /* body / inputs / buttons */
+  --text-md: 15px;    /* card titles, list rows */
+  --text-lg: 18px;    /* section headings */
+  --text-xl: 20px;    /* page title / wordmark */
+  --text-2xl: 28px;   /* login wordmark, big stat */
+  --text-3xl: 32px;   /* hero stat (interest saved) */
+  --text-5xl: 56px;   /* the headline number (debt-free countdown) */
+
+  /* Line heights */
+  --leading-none: 1;
+  --leading-tight: 1.2;
+  --leading-snug: 1.35;
+  --leading-normal: 1.55;
+
+  /* Letter spacing */
+  --tracking-tight: -0.02em;   /* large display numerals & wordmark */
+  --tracking-snug: -0.01em;    /* page titles */
+  --tracking-normal: 0;
+  --tracking-wide: 0.02em;     /* input labels */
+  --tracking-caps: 0.08em;     /* uppercase eyebrows */
+
+  /* Semantic roles */
+  --eyebrow: var(--weight-semibold) var(--text-xs)/var(--leading-tight) var(--font-sans);
+  --display-stat: var(--weight-bold) var(--text-5xl)/var(--leading-none) var(--font-mono);
+}
+
+/* Uppercase eyebrow label — the recurring "section caption" pattern */
+.sovi-eyebrow {
+  font: var(--eyebrow);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* Financial numerals render in mono with tight tracking */
+.sovi-numeral {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--tracking-tight);
+}

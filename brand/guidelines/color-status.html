@@ -1,0 +1,21 @@
+<!-- @dsCard group="Colors" viewport="700x150" name="Status — Emerald & Amber" subtitle="Forward progress and attention (never alarm red)" -->
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8" /><link rel="stylesheet" href="../styles.css" />
+<style>
+  body { margin: 0; background: var(--bg-app); font-family: var(--font-sans); padding: 20px; }
+  .row { display: flex; gap: 10px; }
+  .sw { flex: 1; height: 96px; border-radius: var(--radius-sm); display: flex; flex-direction: column; justify-content: flex-end; padding: 10px; box-sizing: border-box; }
+  .name { font-size: 11px; font-weight: 600; color: #0f172a; }
+  .hex { font-family: var(--font-mono); font-size: 10px; color: rgba(15,23,42,.6); margin-top: 2px; }
+  .note { color: var(--text-faint); font-size: 11px; margin-top: 12px; }
+</style></head>
+<body>
+<div class="row">
+  <div class="sw" style="background: var(--emerald-400)"><span class="name">positive · emerald</span><span class="hex">#34d399</span></div>
+  <div class="sw" style="background: var(--emerald-glow); border:1px solid var(--emerald-glow-strong)"><span class="name" style="color:var(--positive)">emerald tint</span></div>
+  <div class="sw" style="background: var(--amber-400)"><span class="name">attention · amber</span><span class="hex">#fbbf24</span></div>
+  <div class="sw" style="background: var(--amber-glow); border:1px solid var(--amber-glow-strong)"><span class="name" style="color:var(--attention)">amber tint</span></div>
+</div>
+<p class="note">No alarm red anywhere in Sovi — debt is forward progress; amber is the strongest signal we use.</p>
+</body></html>

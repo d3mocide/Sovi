@@ -1,0 +1,20 @@
+<!-- @dsCard group="Spacing" viewport="700x150" name="Corner radii" subtitle="From 4px chips to 20px feature panels" -->
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8" /><link rel="stylesheet" href="../styles.css" />
+<style>
+  body { margin: 0; background: var(--bg-app); font-family: var(--font-sans); padding: 24px; }
+  .row { display: flex; gap: 16px; align-items: center; }
+  .box { width: 86px; height: 86px; background: var(--surface-card); border: 1px solid var(--border-hairline); display: flex; align-items: flex-end; justify-content: center; padding-bottom: 8px; box-sizing: border-box; }
+  .t { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); }
+  .pill { width: 120px; height: 40px; border-radius: var(--radius-pill); }
+</style></head>
+<body>
+<div class="row">
+  <div class="box" style="border-radius:var(--radius-xs)"><span class="t">xs · 4</span></div>
+  <div class="box" style="border-radius:var(--radius-sm)"><span class="t">sm · 6</span></div>
+  <div class="box" style="border-radius:var(--radius-md)"><span class="t">md · 12</span></div>
+  <div class="box" style="border-radius:var(--radius-lg)"><span class="t">lg · 20</span></div>
+  <div class="box pill"><span class="t">pill</span></div>
+</div>
+</body></html>
