@@ -15,7 +15,6 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.execute("CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE")
     op.execute("CREATE EXTENSION IF NOT EXISTS citext")
     op.execute("CREATE EXTENSION IF NOT EXISTS pgcrypto")
 
@@ -70,11 +69,6 @@ def upgrade() -> None:
             captured_at       TIMESTAMPTZ NOT NULL DEFAULT now()
         )
     """)
-
-    # TimescaleDB hypertable — partition by captured_at
-    op.execute(
-        "SELECT create_hypertable('balance_snapshots', 'captured_at')"
-    )
 
     op.execute("""
         CREATE TABLE categories (
