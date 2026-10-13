@@ -149,10 +149,10 @@ async def login(
 
     # 5. Create partial session (totp_verified=False)
     token = await create_session(redis, user_id, totp_verified=False)
-    set_session_cookie(response, token, secure=not settings.DEBUG)
+    set_session_cookie(response, token, secure=settings.COOKIE_SECURE)
 
     # 6. Set CSRF cookie
-    set_csrf_cookie(response, secure=not settings.DEBUG)
+    set_csrf_cookie(response, secure=settings.COOKIE_SECURE)
 
     # 7. Return appropriate response
     if totp_enabled:
@@ -287,10 +287,10 @@ async def totp_verify(
         await delete_session(redis, token)
 
     new_token = await create_session(redis, user_id, totp_verified=True)
-    set_session_cookie(response, new_token, secure=not settings.DEBUG)
+    set_session_cookie(response, new_token, secure=settings.COOKIE_SECURE)
 
     # Refresh CSRF cookie
-    set_csrf_cookie(response, secure=not settings.DEBUG)
+    set_csrf_cookie(response, secure=settings.COOKIE_SECURE)
 
     return TotpVerifyResponse(verified=True)
 
@@ -347,7 +347,7 @@ async def setup_status(
     db: Annotated[asyncpg.Connection, Depends(get_db)],
 ):
     """Check if the system has been initialized (i.e. has at least one user)."""
-    set_csrf_cookie(response, secure=not settings.DEBUG)
+    set_csrf_cookie(response, secure=settings.COOKIE_SECURE)
     count = await db.fetchval("SELECT COUNT(*) FROM users")
     return {"is_initialized": count > 0}
 

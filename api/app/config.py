@@ -36,6 +36,8 @@ class Settings(BaseSettings):
 
     # Runtime
     DEBUG: bool = False
+    # Cookies are Secure (HTTPS only) unless this is turned off for plain-HTTP development.
+    COOKIE_SECURE: bool = True
     LOG_LEVEL: str = "info"
 
     @model_validator(mode="before")
