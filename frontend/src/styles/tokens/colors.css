@@ -5,20 +5,28 @@
    ============================================================ */
 
 :root {
-  /* ---- Base palette: Navy / Slate (neutral spine) ---- */
-  --navy-950: #0a1222;   /* deepest — app letterbox / page void */
-  --navy-900: #0f172a;   /* primary app background */
-  --navy-850: #131d33;   /* raised background / sunken input fill */
-  --navy-800: #1e293b;   /* card surface */
-  --navy-750: #263348;   /* surface hover */
-  --navy-700: #334155;   /* border / hairline */
-  --navy-600: #475569;   /* strong border / disabled fg */
-  --navy-500: #64748b;   /* faint text */
-  --navy-400: #94a3b8;   /* muted text */
-  --navy-300: #cbd5e1;   /* secondary text */
-  --navy-200: #e2e8f0;   /* primary text */
-  --navy-100: #f1f5f9;   /* near-white (light surfaces) */
-  --navy-050: #f8fafc;   /* lightest */
+  /* ---- Frosted glass ---- */
+  --glass-bg: rgba(255, 255, 255, 0.045);
+  --glass-bg-hover: rgba(255, 255, 255, 0.075);
+  --glass-bg-strong: rgba(16, 18, 28, 0.78);
+  --glass-border: rgba(255, 255, 255, 0.09);
+  --glass-border-top: rgba(255, 255, 255, 0.16);
+  --blur-glass: blur(18px) saturate(140%);
+
+  /* ---- Base palette: graphite ink with a faint violet cast (neutral spine; names kept as --navy-*) ---- */
+  --navy-950: #07080c;   /* deepest — app letterbox / page void */
+  --navy-900: #0b0c12;   /* primary app background */
+  --navy-850: #10121a;   /* raised background / sunken input fill */
+  --navy-800: #161925;   /* card surface */
+  --navy-750: #1d2130;   /* surface hover */
+  --navy-700: #2a2e3f;   /* border / hairline */
+  --navy-600: #3d4256;   /* strong border / disabled fg */
+  --navy-500: #6b7186;   /* faint text */
+  --navy-400: #9aa0b5;   /* muted text */
+  --navy-300: #c4c9d9;   /* secondary text */
+  --navy-200: #e8eaf3;   /* primary text */
+  --navy-100: #f2f3f8;   /* near-white (light surfaces) */
+  --navy-050: #f9fafc;   /* lightest */
 
   /* ---- Sky: primary action / brand accent ---- */
   --sky-700: #0369a1;
@@ -56,11 +64,11 @@
   --bg-app: var(--navy-900);
   --bg-void: var(--navy-950);
   --bg-raised: var(--navy-850);
-  --surface-card: var(--navy-800);
-  --surface-card-hover: var(--navy-750);
-  --surface-input: #0f1f35;       /* sunken field fill */
-  --surface-input-deep: #0a1628;  /* deepest field fill (selects) */
-  --surface-overlay: rgba(3, 7, 18, 0.8);  /* modal scrim (+ blur) */
+  --surface-card: var(--glass-bg);
+  --surface-card-hover: var(--glass-bg-hover);
+  --surface-input: rgba(255, 255, 255, 0.04);       /* sunken field fill */
+  --surface-input-deep: #10121a;  /* deepest field fill (selects) */
+  --surface-overlay: rgba(5, 6, 10, 0.72);  /* modal scrim (+ blur) */
 
   /* Text */
   --text-strong: var(--navy-200);
@@ -71,7 +79,7 @@
   --text-on-accent: var(--navy-900);   /* dark text on sky buttons */
 
   /* Borders */
-  --border-hairline: var(--navy-700);
+  --border-hairline: var(--glass-border);
   --border-strong: var(--navy-600);
   --border-accent: var(--sky-glow-strong);
 
@@ -82,16 +90,16 @@
   --accent-tint-border: var(--sky-glow-strong);
 
   /* Status (calm semantics) */
-  --positive: var(--emerald-400);
-  --positive-tint: var(--emerald-glow);
-  --positive-tint-border: var(--emerald-glow-strong);
+  --positive: #5eead4;
+  --positive-tint: rgba(94, 234, 212, 0.12);
+  --positive-tint-border: rgba(94, 234, 212, 0.28);
   --attention: var(--amber-400);
   --attention-tint: var(--amber-glow);
   --attention-tint-border: var(--amber-glow-strong);
 
   /* Data viz */
-  --data-1: var(--sky-400);
-  --data-2: var(--emerald-400);
+  --data-1: var(--violet-400);
+  --data-2: #5eead4;
   --data-3: var(--amber-400);
-  --data-4: var(--violet-400);
+  --data-4: var(--sky-400);
 }

@@ -3,25 +3,22 @@ import { simulate, simulateSideBySide } from "@sovi/payoff";
 import type { Debt, Strategy } from "@sovi/payoff";
 import { useGamification } from "../hooks/useGamification";
 import { api } from "../api/client";
-import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
-import { Eyebrow, Numeral } from "../components/ui/Stat";
-import { AppHeader, TabNav } from "../components/ui/AppChrome";
+import { Numeral } from "../components/ui/Stat";
+import { Panel } from "../components/ui/Panel";
+import { StatTile } from "../components/ui/StatTile";
+import { AppShell } from "../components/ui/AppChrome";
+import { money, monthsToText } from "../lib/format";
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { theme } from "../theme";
 
 type ViewStrategy = "avalanche" | "snowball" | "side-by-side";
 
-function formatCurrency(n: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(n);
-}
+const formatCurrency = (n: number) => money(n);
 
 function formatDate(d: Date | null): string {
   if (!d) return "Beyond 50 years";
-  return d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  return d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
 }
 
 export function SimulatorPage() {
@@ -91,218 +88,173 @@ export function SimulatorPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div style={{ minHeight: "100vh", background: theme.colors.bg, padding: "24px" }}>
-        <p style={{ color: theme.colors.textMuted }}>Loading…</p>
-      </div>
-    );
-  }
-
   const isSideBySide = strategy === "side-by-side";
   const sideBySideResult = isSideBySide ? (result as ReturnType<typeof simulateSideBySide>) : null;
   const singleResult = !isSideBySide ? (result as ReturnType<typeof simulate>) : null;
 
   const monthsSaved =
-    singleResult && baseline
-      ? Math.max(0, baseline.totalMonths - singleResult.totalMonths)
-      : 0;
+    singleResult && baseline ? Math.max(0, baseline.totalMonths - singleResult.totalMonths) : 0;
+  const interestSaved = singleResult && baseline ? Math.max(0, baseline.totalInterest - singleResult.totalInterest) : 0;
+
+  // Total owed per month: this plan vs minimums only
+  const timeline = useMemo(() => {
+    if (!singleResult || !baseline) return [];
+    const total = (b: Record<string, number>) => Object.values(b).reduce((a, v) => a + v, 0);
+    const start = debts.reduce((a, d) => a + d.balance, 0);
+    const len = Math.max(singleResult.schedule.length, baseline.schedule.length);
+    const out = [{ month: 0, plan: start, minimums: start }];
+    for (let i = 0; i < len; i++) {
+      const p = singleResult.schedule[i];
+      const m = baseline.schedule[i];
+      out.push({ month: i + 1, plan: p ? total(p.balances) : 0, minimums: m ? total(m.balances) : 0 });
+    }
+    return out;
+  }, [singleResult, baseline, debts]);
+
+  const strategyTabs = (
+    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+      {(["avalanche", "snowball", "side-by-side"] as ViewStrategy[]).map((s) => {
+        const active = strategy === s;
+        return (
+          <button
+            key={s}
+            onClick={() => setStrategy(s)}
+            style={{
+              padding: "7px 14px", fontSize: 13, fontWeight: 500, fontFamily: theme.fonts.sans,
+              borderRadius: 999, cursor: "pointer",
+              border: `1px solid ${active ? "var(--glass-border-top)" : "var(--glass-border)"}`,
+              background: active ? "rgba(255,255,255,0.09)" : "transparent",
+              color: active ? "var(--text-strong)" : "var(--text-muted)",
+              boxShadow: active ? "inset 0 -2px 0 var(--accent)" : "none",
+            }}
+          >
+            {s === "side-by-side" ? "Side-by-side" : s.charAt(0).toUpperCase() + s.slice(1)}
+          </button>
+        );
+      })}
+    </div>
+  );
 
   return (
-    <div style={{ minHeight: "100vh", background: theme.colors.bg }}>
-      <AppHeader />
-      <TabNav />
+    <AppShell title="Simulator" subtitle="Try an extra monthly payment and compare payoff strategies">
+      {loading && <p style={{ color: "var(--text-muted)" }}>Loading…</p>}
+      {!loading && debts.length === 0 && (
+        <Panel>
+          <p style={{ color: "var(--text-muted)", fontSize: 14 }}>
+            No debts with an APR yet. Add the details on the Accounts page.
+          </p>
+        </Panel>
+      )}
 
-      <main
-        style={{
-          padding: "24px",
-          maxWidth: "680px",
-          margin: "0 auto",
-          display: "flex",
-          flexDirection: "column",
-          gap: "20px",
-        }}
-      >
-        {debts.length === 0 && (
-          <Card>
-            <p style={{ color: theme.colors.textMuted, fontSize: "14px" }}>
-              No debts with APR configured. Add debt details in Accounts first.
-            </p>
-          </Card>
-        )}
-
-        {/* Controls */}
-        <Card>
-          <Eyebrow style={{ marginBottom: "16px" }}>Extra monthly payment</Eyebrow>
-
-          <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
+      {!loading && debts.length > 0 && (
+        <div className="grid-12">
+          <Panel className="span-4" title="Plan">
+            <p style={{ fontSize: 12.5, color: "var(--text-muted)", marginBottom: 10 }}>Extra per month</p>
+            <Numeral as="p" style={{ fontSize: 40, fontWeight: 600, lineHeight: 1, color: "var(--text-strong)", marginBottom: 14 }}>
+              {formatCurrency(extra)}
+            </Numeral>
             <input
-              type="range"
-              min={0}
-              max={2000}
-              step={50}
-              value={extra}
+              type="range" min={0} max={2000} step={25} value={extra}
               onChange={(e) => handleSlider(Number(e.target.value))}
-              style={{ flex: 1, accentColor: theme.colors.accent }}
+              style={{ width: "100%", accentColor: "var(--accent)" }}
             />
-            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-              <span style={{ color: theme.colors.textMuted, fontSize: "14px" }}>$</span>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--text-faint)", marginTop: 4 }}>
+              <span>$0</span><span>$2,000</span>
+            </div>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 14, fontSize: 12.5, color: "var(--text-muted)" }}>
+              Exact amount
               <input
-                type="number"
-                min={0}
-                value={extraInput}
+                type="number" min={0} value={extraInput}
                 onChange={(e) => handleInputChange(e.target.value)}
-                style={{
-                  width: "80px",
-                  background: theme.colors.inputDeep,
-                  border: `1px solid ${theme.colors.border}`,
-                  borderRadius: theme.radius.sm,
-                  padding: "6px 10px",
-                  color: theme.colors.text,
-                  fontSize: "14px",
-                  fontWeight: 600,
-                  fontFamily: theme.fonts.mono,
-                  fontVariantNumeric: "tabular-nums",
-                }}
+                style={{ width: 96, background: "var(--surface-input)", border: "1px solid var(--glass-border)", borderRadius: 8, padding: "6px 10px", color: "var(--text-strong)", fontFamily: theme.fonts.mono, fontSize: 13 }}
               />
-            </div>
-          </div>
+            </label>
+            <p style={{ fontSize: 12.5, color: "var(--text-muted)", margin: "20px 0 8px" }}>Strategy</p>
+            {strategyTabs}
+            {singleResult && (
+              <div style={{ display: "flex", gap: 12, alignItems: "center", marginTop: 22 }}>
+                <Button onClick={handleSave} loading={saving} variant="secondary" size="sm">Save scenario</Button>
+                {saveMsg && <span style={{ fontSize: 12.5, color: "var(--text-muted)" }}>{saveMsg}</span>}
+              </div>
+            )}
+          </Panel>
 
-          {/* Strategy toggle (segmented control) */}
-          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-            {(["avalanche", "snowball", "side-by-side"] as ViewStrategy[]).map((s) => {
-              const active = strategy === s;
-              return (
-                <button
-                  key={s}
-                  onClick={() => setStrategy(s)}
-                  style={{
-                    padding: "7px 16px",
-                    fontSize: "13px",
-                    fontWeight: 500,
-                    fontFamily: theme.fonts.sans,
-                    borderRadius: theme.radius.sm,
-                    border: `1px solid ${active ? theme.colors.accent : theme.colors.border}`,
-                    background: active ? theme.colors.accentTint : "transparent",
-                    color: active ? theme.colors.accent : theme.colors.textMuted,
-                    cursor: "pointer",
-                    transition: `all ${theme.motion.durFast} ${theme.motion.easeStandard}`,
-                    textTransform: "capitalize",
-                  }}
-                >
-                  {s === "side-by-side" ? "Side-by-side" : s.charAt(0).toUpperCase() + s.slice(1)}
-                </button>
-              );
-            })}
-          </div>
-        </Card>
+          <div className="span-8" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {singleResult && (
+              <>
+                <div className="grid-12" style={{ gap: 16 }}>
+                  <StatTile className="span-4" label="Debt-free" value={formatDate(singleResult.debtFreeDate)} sub={monthsToText(singleResult.totalMonths)} />
+                  <StatTile className="span-4" label="Total interest" value={formatCurrency(singleResult.totalInterest)} tone="attention" />
+                  <StatTile
+                    className="span-4"
+                    label="Saved vs minimums"
+                    value={formatCurrency(interestSaved)}
+                    tone="positive"
+                    sub={monthsSaved > 0 ? `${monthsToText(monthsSaved)} sooner` : "add an extra payment to see savings"}
+                  />
+                </div>
 
-        {/* Results */}
-        {singleResult && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-              <Card style={{ padding: "16px" }}>
-                <Eyebrow style={{ marginBottom: "8px" }}>Debt-free date</Eyebrow>
-                <Numeral as="p" style={{ fontSize: "18px", fontWeight: 700, color: theme.colors.accent }}>
-                  {formatDate(singleResult.debtFreeDate)}
-                </Numeral>
-              </Card>
+                <Panel title="Total owed over time" aside="plan vs minimums only">
+                  <ResponsiveContainer width="100%" height={260}>
+                    <AreaChart data={timeline} margin={{ top: 6, right: 4, left: 0, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="planGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="var(--positive)" stopOpacity={0.28} />
+                          <stop offset="95%" stopColor="var(--positive)" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} />
+                      <XAxis dataKey="month" tick={{ fill: "var(--text-muted)", fontSize: 11 }} axisLine={false} tickLine={false} minTickGap={40}
+                        tickFormatter={(m) => (m % 12 === 0 ? `${m / 12}y` : `${m}m`)} />
+                      <YAxis tick={{ fill: "var(--text-muted)", fontSize: 11 }} axisLine={false} tickLine={false} width={52}
+                        tickFormatter={(v) => (v >= 1000 ? `$${(v / 1000).toFixed(v >= 10000 ? 0 : 1)}k` : `$${Math.round(v)}`)} />
+                      <Tooltip
+                        contentStyle={{ background: "var(--glass-bg-strong)", border: "1px solid var(--glass-border)", borderRadius: 10, color: "var(--text-strong)", fontSize: 12.5 }}
+                        formatter={(v: number, n: string) => [formatCurrency(v), n === "plan" ? "With plan" : "Minimums only"]}
+                        labelFormatter={(m) => `Month ${m}`}
+                      />
+                      <Area type="monotone" dataKey="minimums" stroke="var(--text-faint)" strokeDasharray="4 4" strokeWidth={1.5} fill="none" dot={false} />
+                      <Area type="monotone" dataKey="plan" stroke="var(--positive)" strokeWidth={2} fill="url(#planGrad)" dot={false} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </Panel>
 
-              <Card style={{ padding: "16px" }}>
-                <Eyebrow style={{ marginBottom: "8px" }}>Total interest</Eyebrow>
-                <Numeral as="p" style={{ fontSize: "18px", fontWeight: 700, color: theme.colors.text }}>
-                  {formatCurrency(singleResult.totalInterest)}
-                </Numeral>
-              </Card>
-            </div>
-
-            {monthsSaved > 0 && (
-              <Card style={{ padding: "16px" }}>
-                <Eyebrow style={{ marginBottom: "8px" }}>Saved vs minimums only</Eyebrow>
-                <p style={{ fontSize: "18px", fontWeight: 700, color: theme.colors.positive }}>
-                  <Numeral>{monthsSaved}</Numeral> months earlier &nbsp;·&nbsp;{" "}
-                  <Numeral>
-                    {formatCurrency(
-                      Math.max(0, (baseline?.totalInterest ?? 0) - singleResult.totalInterest)
-                    )}
-                  </Numeral>{" "}
-                  less interest
-                </p>
-              </Card>
+                {singleResult.warnings.length > 0 && (
+                  <Panel>
+                    {singleResult.warnings.map((w, i) => (
+                      <p key={i} style={{ fontSize: 13, color: "var(--attention)" }}>{w}</p>
+                    ))}
+                  </Panel>
+                )}
+              </>
             )}
 
-            {singleResult.warnings.length > 0 && (
-              <Card style={{ padding: "16px", borderColor: theme.colors.warning }}>
-                {singleResult.warnings.map((w, i) => (
-                  <p key={i} style={{ fontSize: "13px", color: theme.colors.warning }}>
-                    {w}
-                  </p>
-                ))}
-              </Card>
-            )}
-
-            <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-              <Button onClick={handleSave} loading={saving} variant="secondary">
-                Save scenario
-              </Button>
-              {saveMsg && (
-                <span style={{ fontSize: "13px", color: theme.colors.textMuted }}>{saveMsg}</span>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Side-by-side results */}
-        {sideBySideResult && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-              {(
-                [
-                  { key: "avalanche", label: "Avalanche", r: sideBySideResult.avalanche },
-                  { key: "snowball", label: "Snowball", r: sideBySideResult.snowball },
-                ] as const
-              ).map(({ key, label, r }) => (
-                <Card key={key} style={{ padding: "16px" }}>
-                  <Eyebrow style={{ marginBottom: "12px" }}>{label}</Eyebrow>
-                  <Numeral as="p" style={{ fontSize: "15px", fontWeight: 600, color: theme.colors.accent }}>
-                    {formatDate(r.debtFreeDate)}
-                  </Numeral>
-                  <p
-                    style={{
-                      fontSize: "13px",
-                      color: theme.colors.textMuted,
-                      marginTop: "6px",
-                    }}
-                  >
-                    <Numeral>{formatCurrency(r.totalInterest)}</Numeral> interest
-                  </p>
-                </Card>
-              ))}
-            </div>
-
-            {(sideBySideResult.monthsDelta !== 0 || sideBySideResult.interestDelta !== 0) && (
-              <Card style={{ padding: "16px" }}>
-                <p
-                  style={{
-                    fontSize: "13px",
-                    color: theme.colors.textMuted,
-                  }}
-                >
-                  Avalanche is{" "}
-                  <span style={{ color: theme.colors.positive, fontWeight: 600 }}>
-                    <Numeral>{Math.abs(sideBySideResult.monthsDelta)}</Numeral> months faster
-                  </span>{" "}
-                  and saves{" "}
-                  <span style={{ color: theme.colors.positive, fontWeight: 600 }}>
-                    <Numeral>{formatCurrency(Math.abs(sideBySideResult.interestDelta))}</Numeral>
-                  </span>{" "}
-                  in interest vs snowball.
-                </p>
-              </Card>
+            {sideBySideResult && (
+              <>
+                <div className="grid-12" style={{ gap: 16 }}>
+                  {(
+                    [
+                      { key: "avalanche", label: "Avalanche", r: sideBySideResult.avalanche },
+                      { key: "snowball", label: "Snowball", r: sideBySideResult.snowball },
+                    ] as const
+                  ).map(({ key, label, r }) => (
+                    <StatTile key={key} className="span-6" label={label} value={formatDate(r.debtFreeDate)} sub={`${formatCurrency(r.totalInterest)} interest`} />
+                  ))}
+                </div>
+                {(sideBySideResult.monthsDelta !== 0 || sideBySideResult.interestDelta !== 0) && (
+                  <Panel>
+                    <p style={{ fontSize: 14, color: "var(--text-secondary)" }}>
+                      Avalanche is{" "}
+                      <span style={{ color: "var(--positive)", fontWeight: 600 }}>{monthsToText(Math.abs(sideBySideResult.monthsDelta))} faster</span> and saves{" "}
+                      <span style={{ color: "var(--positive)", fontWeight: 600 }}>{formatCurrency(Math.abs(sideBySideResult.interestDelta))}</span> in interest vs snowball.
+                    </p>
+                  </Panel>
+                )}
+              </>
             )}
           </div>
-        )}
-      </main>
-    </div>
+        </div>
+      )}
+    </AppShell>
   );
 }

@@ -1,29 +1,19 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { useAuth } from "../hooks/useAuth";
 import { useGamification } from "../hooks/useGamification";
 import { api } from "../api/client";
-import { DebtFreeCountdown } from "../components/DebtFreeCountdown";
-import { DebtProgressList } from "../components/DebtProgressList";
 import { TrendChart } from "../components/TrendChart";
 import { StreakBadges } from "../components/StreakBadges";
-import { Card } from "../components/ui/Card";
+import { DebtTable } from "../components/DebtTable";
+import { Panel } from "../components/ui/Panel";
+import { StatTile } from "../components/ui/StatTile";
+import { Numeral } from "../components/ui/Stat";
 import { Button } from "../components/ui/Button";
-import { Eyebrow, StatBlock } from "../components/ui/Stat";
 import { Icon } from "../components/ui/Icon";
-import { AppHeader, TabNav } from "../components/ui/AppChrome";
-import { theme } from "../theme";
-
-function formatCurrency(n: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(n);
-}
+import { AppShell } from "../components/ui/AppChrome";
+import { money, longDate } from "../lib/format";
 
 export function DashboardPage() {
-  const { user } = useAuth();
   const { data, loading, error, refresh } = useGamification();
   const [refreshing, setRefreshing] = useState(false);
   const [refreshMsg, setRefreshMsg] = useState<string | null>(null);
@@ -33,7 +23,7 @@ export function DashboardPage() {
     setRefreshMsg(null);
     try {
       await api.post("/simplefin/refresh");
-      setRefreshMsg("Sync queued — data will update shortly.");
+      setRefreshMsg("Sync queued");
       setTimeout(() => refresh(), 3000);
     } catch (err) {
       setRefreshMsg(err instanceof Error ? err.message : "Refresh failed");
@@ -42,127 +32,90 @@ export function DashboardPage() {
     }
   };
 
-  return (
-    <div style={{ minHeight: "100vh", background: theme.colors.bg }}>
-      <AppHeader>
-        <span style={{ fontSize: "13px", color: theme.colors.textMuted }}>{user?.email}</span>
-        <Link
-          to="/settings"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "6px",
-            fontSize: "13px",
-            color: theme.colors.textMuted,
-            padding: "5px 10px",
-            border: `1px solid ${theme.colors.border}`,
-            borderRadius: theme.radius.sm,
-          }}
-        >
-          <Icon name="settings" size={15} />
-          Settings
-        </Link>
-      </AppHeader>
-
-      <TabNav />
-
-      <main
-        style={{
-          padding: "24px",
-          maxWidth: "680px",
-          margin: "0 auto",
-          display: "flex",
-          flexDirection: "column",
-          gap: "20px",
-        }}
+  const actions = (
+    <>
+      {refreshMsg && <span style={{ fontSize: 12.5, color: "var(--text-muted)" }}>{refreshMsg}</span>}
+      <Button
+        variant="secondary"
+        size="sm"
+        onClick={handleRefresh}
+        loading={refreshing}
+        iconLeft={<Icon name="refresh" size={15} style={{ animation: refreshing ? "sovi-spin 0.9s linear infinite" : undefined }} />}
       >
-        {loading && (
-          <p style={{ color: theme.colors.textMuted, fontSize: "14px" }}>Loading…</p>
-        )}
+        Refresh
+      </Button>
+      <Link to="/simulator" className="glass is-interactive" style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 12px", fontSize: 13, fontWeight: 500, color: "var(--text-strong)", borderRadius: "var(--radius-sm)" }}>
+        <Icon name="sliders" size={15} />
+        Simulator
+      </Link>
+    </>
+  );
 
-        {error && (
-          <Card>
-            <p style={{ color: theme.colors.warning, fontSize: "14px" }}>{error}</p>
-          </Card>
-        )}
+  const debts = data?.debt_progress ?? [];
+  const owed = Number(data?.total_current_debt ?? 0);
+  const monthlyInterest = debts.reduce((a, d) => a + Number(d.monthly_interest ?? 0), 0);
+  const cards = debts.filter((d) => d.credit_limit != null && d.utilization_pct != null);
+  const limitTotal = cards.reduce((a, d) => a + Number(d.credit_limit), 0);
+  const cardOwed = cards.reduce((a, d) => a + d.current_balance, 0);
+  const utilPct = limitTotal > 0 ? (cardOwed / limitTotal) * 100 : null;
+  const months = data?.days_until_debt_free != null ? Math.round(data.days_until_debt_free / 30.4) : null;
+  const years = months != null ? months / 12 : null;
 
-        {data && (
-          <>
-            <DebtFreeCountdown
-              debtFreeDate={data.debt_free_date}
-              daysUntil={data.days_until_debt_free}
-              totalDebt={Number(data.total_current_debt)}
-            />
+  return (
+    <AppShell title="Dashboard" subtitle={debts.length ? `${debts.length} debt${debts.length === 1 ? "" : "s"} tracked` : undefined} actions={actions}>
+      {loading && <p style={{ color: "var(--text-muted)", fontSize: 14 }}>Loading…</p>}
+      {error && <Panel><p style={{ color: "var(--attention)", fontSize: 14 }}>{error}</p></Panel>}
 
-            <DebtProgressList debts={data.debt_progress} />
+      {data && (
+        <div className="grid-12">
+          <StatTile className="span-3" label="Total owed" value={money(owed)} sub={`${debts.length} account${debts.length === 1 ? "" : "s"}`} />
+          <StatTile className="span-3" label="Interest per month" value={money(monthlyInterest)} tone="attention" sub="at current balances and APRs" />
+          <StatTile
+            className="span-3"
+            label="Card utilization"
+            value={utilPct != null ? `${utilPct.toFixed(0)}%` : "n/a"}
+            tone={utilPct != null && utilPct >= 30 ? "attention" : "positive"}
+            sub={utilPct != null ? `${money(cardOwed)} of ${money(limitTotal)} limit` : "set credit limits on Accounts"}
+          />
+          <StatTile className="span-3" label="Interest saved" value={money(Number(data.interest_saved))} tone="positive" sub="vs paying minimums only" />
 
-            {/* Interest saved — eyebrow + big mono numeral. */}
-            <Card>
-              <StatBlock
-                label="Interest saved vs minimums"
-                value={formatCurrency(Number(data.interest_saved))}
-                size="md"
-                tone="positive"
-              />
-            </Card>
-
-            <TrendChart trend={data.trend} />
-
-            <StreakBadges streaks={data.streaks} />
-
-            {/* Quick actions */}
-            <Card>
-              <Eyebrow style={{ marginBottom: "14px" }}>Quick actions</Eyebrow>
-              <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-                <Button
-                  variant="secondary"
-                  onClick={handleRefresh}
-                  loading={refreshing}
-                  size="sm"
-                  iconLeft={
-                    <Icon
-                      name="refresh"
-                      size={15}
-                      style={{ animation: refreshing ? "sovi-spin 0.9s linear infinite" : undefined }}
-                    />
-                  }
-                >
-                  Refresh data
-                </Button>
-                <Link
-                  to="/simulator"
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    padding: "6px 12px",
-                    fontSize: "13px",
-                    fontWeight: 500,
-                    color: theme.colors.accent,
-                    border: `1px solid ${theme.colors.accentTintBorder}`,
-                    borderRadius: theme.radius.sm,
-                    background: theme.colors.accentTint,
-                  }}
-                >
-                  <Icon name="sliders" size={15} />
-                  Open Simulator
-                </Link>
-              </div>
-              {refreshMsg && (
-                <p
-                  style={{
-                    marginTop: "10px",
-                    fontSize: "13px",
-                    color: theme.colors.textMuted,
-                  }}
-                >
-                  {refreshMsg}
+          <Panel className="span-4" title="Debt-free in">
+            {months != null && data.debt_free_date ? (
+              <>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+                  <Numeral style={{ fontSize: 64, fontWeight: 600, lineHeight: 1, color: "var(--text-strong)" }}>
+                    {years != null && years >= 2 ? years.toFixed(1) : months}
+                  </Numeral>
+                  <span style={{ fontSize: 18, color: "var(--text-muted)" }}>{years != null && years >= 2 ? "years" : "months"}</span>
+                </div>
+                <p style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 8, color: "var(--text-secondary)", fontSize: 13.5 }}>
+                  <Icon name="calendar" size={15} />
+                  <Numeral>{longDate(data.debt_free_date)}</Numeral>
                 </p>
-              )}
-            </Card>
-          </>
-        )}
-      </main>
-    </div>
+                <p style={{ marginTop: 6, color: "var(--text-muted)", fontSize: 12.5 }}>
+                  {money(owed)} remaining · avalanche plan
+                </p>
+              </>
+            ) : (
+              <p style={{ color: "var(--text-muted)", fontSize: 14 }}>Add a debt with an APR to see your payoff date.</p>
+            )}
+          </Panel>
+
+          <div className="span-8" style={{ display: "contents" }}>
+            <TrendChart trend={data.trend} className="span-8" />
+          </div>
+
+          <Panel className="span-12" title="Debts" aside="sorted by APR">
+            <DebtTable debts={debts} />
+          </Panel>
+
+          {data.streaks.length > 0 && (
+            <div className="span-12">
+              <StreakBadges streaks={data.streaks} />
+            </div>
+          )}
+        </div>
+      )}
+    </AppShell>
   );
 }

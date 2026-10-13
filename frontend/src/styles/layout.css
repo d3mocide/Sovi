@@ -1,0 +1,108 @@
+/* ============================================================
+   Sovi layout: sidebar shell (laptop) -> bottom bar (phone),
+   12-column grid, frosted glass panels.
+   ============================================================ */
+
+/* Atmosphere: the soft coloured glows behind the glass */
+body {
+  background:
+    radial-gradient(900px 600px at 8% -10%, rgba(139, 92, 246, 0.30), transparent 60%),
+    radial-gradient(800px 560px at 100% 0%, rgba(45, 212, 191, 0.17), transparent 60%),
+    radial-gradient(900px 700px at 60% 115%, rgba(56, 189, 248, 0.11), transparent 60%),
+    var(--bg-app);
+  background-attachment: fixed;
+  min-height: 100vh;
+}
+
+.glass {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-top-color: var(--glass-border-top);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  -webkit-backdrop-filter: var(--blur-glass);
+  backdrop-filter: var(--blur-glass);
+}
+.glass.is-interactive { cursor: pointer; transition: background var(--dur-fast) var(--ease-standard); }
+.glass.is-interactive:hover { background: var(--glass-bg-hover); }
+
+/* ---- Shell ---- */
+.app-shell { display: grid; grid-template-columns: var(--sidebar-w) minmax(0, 1fr); min-height: 100vh; }
+
+.app-sidebar {
+  position: sticky; top: 0; height: 100vh;
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 22px 14px 18px;
+  background: rgba(8, 9, 14, 0.55);
+  -webkit-backdrop-filter: var(--blur-glass); backdrop-filter: var(--blur-glass);
+  border-right: 1px solid var(--glass-border);
+}
+.app-sidebar .brand { padding: 4px 10px 22px; }
+.app-nav { display: flex; flex-direction: column; gap: 2px; }
+.app-nav a {
+  display: flex; align-items: center; gap: 11px;
+  padding: 10px 12px; border-radius: 10px;
+  font-size: 13.5px; font-weight: 500; color: var(--text-muted);
+  border: 1px solid transparent;
+  transition: background var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
+}
+.app-nav a:hover { color: var(--text-strong); background: rgba(255, 255, 255, 0.04); }
+.app-nav a.active {
+  color: var(--text-strong);
+  background: rgba(255, 255, 255, 0.07);
+  border-color: var(--glass-border);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+.app-nav a.active svg { color: var(--accent); }
+.app-sidebar .spacer { flex: 1; }
+.app-user { padding: 12px 10px 0; border-top: 1px solid var(--glass-border); font-size: 12px; color: var(--text-muted); }
+.app-user .who { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 8px; }
+.app-user button {
+  background: none; border: 1px solid var(--glass-border); color: var(--text-muted);
+  border-radius: 8px; padding: 5px 10px; font-size: 12px; cursor: pointer;
+}
+.app-user button:hover { color: var(--text-strong); border-color: var(--border-strong); }
+
+.app-main { padding: 30px 36px 56px; width: 100%; max-width: var(--desktop-max); margin: 0 auto; }
+.app-main.narrow { max-width: 760px; }
+
+.page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
+.page-head h1 { font-size: 24px; font-weight: 600; letter-spacing: -0.02em; color: var(--text-strong); line-height: 1.15; }
+.page-head p { margin-top: 4px; font-size: 13px; color: var(--text-muted); }
+.page-actions { display: flex; align-items: center; gap: 10px; }
+
+/* ---- Grid ---- */
+.grid-12 { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px; }
+.span-3 { grid-column: span 3; } .span-4 { grid-column: span 4; } .span-5 { grid-column: span 5; }
+.span-6 { grid-column: span 6; } .span-7 { grid-column: span 7; } .span-8 { grid-column: span 8; }
+.span-12 { grid-column: span 12; }
+
+/* Panel title: the thin accent bar + spaced caps label, as on the Ghost console */
+.panel-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.panel-title h2 {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 11.5px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-secondary);
+}
+.panel-title h2::before { content: ""; width: 3px; height: 14px; border-radius: 2px; background: var(--accent); opacity: 0.85; }
+.panel-title .aside { font-size: 12px; color: var(--text-muted); }
+
+/* ---- Responsive ---- */
+@media (max-width: 1180px) {
+  .span-3 { grid-column: span 6; }
+  .span-4, .span-5, .span-6, .span-7, .span-8 { grid-column: span 12; }
+}
+@media (max-width: 860px) {
+  .app-shell { grid-template-columns: minmax(0, 1fr); }
+  .app-sidebar {
+    position: fixed; top: auto; bottom: 0; left: 0; right: 0; height: auto; z-index: 30;
+    flex-direction: row; padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+    border-right: 0; border-top: 1px solid var(--glass-border);
+  }
+  .app-sidebar .brand, .app-sidebar .spacer, .app-user { display: none; }
+  .app-nav { flex-direction: row; width: 100%; justify-content: space-around; }
+  .app-nav a { flex-direction: column; gap: 3px; font-size: 11px; padding: 6px 10px; }
+  .app-nav a.active { box-shadow: none; }
+  .app-main { padding: 20px 16px 96px; }
+  .grid-12 { gap: 12px; }
+  .span-3 { grid-column: span 6; }
+}

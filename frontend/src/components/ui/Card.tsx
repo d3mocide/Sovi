@@ -1,39 +1,20 @@
-import React, { useState } from "react";
-import { theme } from "../../theme";
+import React from "react";
 
 interface CardProps {
   children: React.ReactNode;
   style?: React.CSSProperties;
+  className?: string;
   onClick?: () => void;
 }
 
 /**
- * Sovi Card — the universal surface. Navy fill, 1px hairline border, 12px
- * radius, quiet shadow. Depth comes from contrast + the hairline, not heavy
- * shadow. Interactive cards lift to the hover surface on pointer-over.
+ * Sovi Card — the universal surface: frosted glass (translucent fill, backdrop blur, hairline
+ * border with a brighter top edge). Styles live in styles/layout.css (`.glass`).
  */
-export function Card({ children, style, onClick }: CardProps) {
-  const [hover, setHover] = useState(false);
-  const interactive = Boolean(onClick);
-
+export function Card({ children, style, className, onClick }: CardProps) {
+  const cls = ["glass", onClick ? "is-interactive" : "", className ?? ""].filter(Boolean).join(" ");
   return (
-    <div
-      onClick={onClick}
-      onMouseEnter={interactive ? () => setHover(true) : undefined}
-      onMouseLeave={interactive ? () => setHover(false) : undefined}
-      style={{
-        background: interactive && hover ? theme.colors.surfaceHover : theme.colors.surface,
-        border: `1px solid ${theme.colors.border}`,
-        borderRadius: theme.radius.md,
-        padding: "20px",
-        boxShadow: theme.shadow.card,
-        cursor: interactive ? "pointer" : undefined,
-        transition: interactive
-          ? `background ${theme.motion.durFast} ${theme.motion.easeStandard}`
-          : undefined,
-        ...style,
-      }}
-    >
+    <div onClick={onClick} className={cls} style={{ padding: "20px", ...style }}>
       {children}
     </div>
   );

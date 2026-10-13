@@ -14,6 +14,7 @@ import type { TrendPoint } from "../hooks/useGamification";
 
 interface TrendChartProps {
   trend: TrendPoint[];
+  className?: string;
 }
 
 function formatCurrency(n: number): string {
@@ -34,10 +35,10 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-export function TrendChart({ trend }: TrendChartProps) {
+export function TrendChart({ trend, className }: TrendChartProps) {
   if (trend.length < 2) {
     return (
-      <Card>
+      <Card className={className}>
         <Eyebrow style={{ marginBottom: "8px" }}>90-day trend</Eyebrow>
         <p style={{ color: theme.colors.textMuted, fontSize: "14px" }}>
           Not enough data yet.
@@ -52,9 +53,9 @@ export function TrendChart({ trend }: TrendChartProps) {
   }));
 
   return (
-    <Card>
-      <Eyebrow style={{ marginBottom: "16px" }}>90-day trend</Eyebrow>
-      <ResponsiveContainer width="100%" height={160}>
+    <Card className={className}>
+      <div className="panel-title"><h2>Total owed, 90 days</h2></div>
+      <ResponsiveContainer width="100%" height={200}>
         <AreaChart data={data} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
           <defs>
             {/* The falling debt line — Sovi's own "imagery". */}

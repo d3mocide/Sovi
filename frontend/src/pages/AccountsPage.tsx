@@ -5,7 +5,8 @@ import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { Numeral } from "../components/ui/Stat";
-import { AppHeader, TabNav } from "../components/ui/AppChrome";
+import { AppShell } from "../components/ui/AppChrome";
+import { Panel } from "../components/ui/Panel";
 import { theme } from "../theme";
 
 interface Account {
@@ -188,168 +189,123 @@ export function AccountsPage() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: theme.colors.bg }}>
-      <AppHeader />
-      <TabNav />
-
-      <main
-        style={{
-          padding: "24px",
-          maxWidth: "680px",
-          margin: "0 auto",
-          display: "flex",
-          flexDirection: "column",
-          gap: "12px",
-        }}
+    <>
+      <AppShell
+        title="Accounts"
+        subtitle={
+          !loading && !error
+            ? `${accounts.length} account${accounts.length !== 1 ? "s" : ""}${
+                accounts.filter((a) => a.needs_classification).length > 0
+                  ? `, ${accounts.filter((a) => a.needs_classification).length} need classification`
+                  : ""
+              }`
+            : undefined
+        }
       >
-        <div style={{ marginBottom: "8px" }}>
-          <h2 style={{ fontSize: "18px", fontWeight: 600, color: theme.colors.text }}>
-            Accounts
-          </h2>
-          {!loading && !error && (
-            <p style={{ fontSize: "13px", color: theme.colors.textMuted, marginTop: "4px" }}>
-              {accounts.length} account{accounts.length !== 1 ? "s" : ""}
-              {accounts.filter((a) => a.needs_classification).length > 0 && (
-                <> &mdash; {accounts.filter((a) => a.needs_classification).length} need classification</>
-              )}
-            </p>
-          )}
-        </div>
-
-        {loading && (
-          <p style={{ color: theme.colors.textMuted, fontSize: "14px" }}>Loading…</p>
-        )}
-
+        {loading && <p style={{ color: "var(--text-muted)", fontSize: 14 }}>Loading…</p>}
         {error && (
-          <Card>
-            <p style={{ color: theme.colors.warning, fontSize: "14px" }}>{error}</p>
-          </Card>
+          <Panel>
+            <p style={{ color: "var(--attention)", fontSize: 14 }}>{error}</p>
+          </Panel>
         )}
+        {!loading && !error && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {[
+              { title: "Debts", rows: accounts.filter((a) => a.type === "credit_card" || a.type === "loan"), debt: true },
+              { title: "Assets and other", rows: accounts.filter((a) => a.type !== "credit_card" && a.type !== "loan"), debt: false },
+            ]
+              .filter((g) => g.rows.length > 0)
+              .map((g) => (
+                <Panel key={g.title} title={g.title} aside={g.debt ? `${g.rows.length} · owed ${formatCurrency(g.rows.reduce((t, a) => t + Math.max(-(a.latest_balance ?? 0), 0), 0))}` : `${g.rows.length}`}>
+                  <div style={{ overflowX: "auto" }}>
+                    <div style={{ minWidth: 720 }}>
+                      {g.rows.map((account, i) => {
+                        const isDebt = g.debt;
+                        const bal = account.latest_balance;
+                        const shown = bal === null ? null : isDebt ? Math.max(-bal, 0) : bal;
+                        const util = isDebt && account.credit_limit && shown !== null ? (shown / account.credit_limit) * 100 : null;
+                        const editing = editingId === account.id;
+                        return (
+                          <div
+                            key={account.id}
+                            style={{
+                              display: "grid",
+                              gridTemplateColumns: "minmax(200px, 2fr) 1.3fr 1.6fr auto",
+                              gap: 16,
+                              alignItems: "center",
+                              padding: "13px 2px",
+                              borderTop: i === 0 ? "none" : "1px solid rgba(255,255,255,0.05)",
+                            }}
+                          >
+                            <div>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                                <span style={{ fontWeight: 500, fontSize: 14, color: "var(--text-strong)" }}>{account.name}</span>
+                                {account.needs_classification && <Badge variant="warning">Needs classification</Badge>}
+                              </div>
+                              {editing ? (
+                                <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+                                  <select
+                                    value={editType}
+                                    onChange={(e) => setEditType(e.target.value)}
+                                    style={{ background: theme.colors.inputDeep, border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.sm, padding: "6px 10px", color: theme.colors.text, fontSize: 13 }}
+                                  >
+                                    {ACCOUNT_TYPES.map((t) => (
+                                      <option key={t} value={t}>{TYPE_LABELS[t] ?? t}</option>
+                                    ))}
+                                  </select>
+                                  <Button size="sm" onClick={() => handleSave(account.id)} loading={saving}>Save</Button>
+                                  <Button size="sm" variant="ghost" onClick={() => setEditingId(null)}>Cancel</Button>
+                                </div>
+                              ) : (
+                                <div style={{ display: "flex", gap: 8, marginTop: 6, alignItems: "center" }}>
+                                  <Badge variant="muted">{TYPE_LABELS[account.type] ?? account.type}</Badge>
+                                  {account.is_manual && <span style={{ fontSize: 11.5, color: "var(--text-faint)" }}>manual</span>}
+                                </div>
+                              )}
+                            </div>
 
-        {accounts.map((account) => (
-          <Card key={account.id}>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "flex-start",
-                gap: "12px",
-              }}
-            >
-              <div style={{ flex: 1 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                  <span style={{ fontWeight: 600, fontSize: "15px", color: theme.colors.text }}>
-                    {account.name}
-                  </span>
-                  {account.needs_classification && (
-                    <Badge variant="warning">Needs classification</Badge>
-                  )}
-                </div>
+                            <Numeral style={{ textAlign: "right", fontWeight: 600, fontSize: 15, color: isDebt && shown ? "var(--text-strong)" : "var(--text-strong)" }}>
+                              {shown !== null ? formatCurrency(shown, account.currency) : "no balance yet"}
+                              {isDebt && <span style={{ display: "block", fontSize: 11, fontWeight: 400, color: "var(--text-muted)" }}>owed</span>}
+                            </Numeral>
 
-                {editingId === account.id ? (
-                  <div
-                    style={{ display: "flex", gap: "8px", marginTop: "10px", flexWrap: "wrap" }}
-                  >
-                    <select
-                      value={editType}
-                      onChange={(e) => setEditType(e.target.value)}
-                      style={{
-                        background: theme.colors.inputDeep,
-                        border: `1px solid ${theme.colors.border}`,
-                        borderRadius: theme.radius.sm,
-                        padding: "6px 10px",
-                        color: theme.colors.text,
-                        fontSize: "13px",
-                      }}
-                    >
-                      {ACCOUNT_TYPES.map((t) => (
-                        <option key={t} value={t}>
-                          {TYPE_LABELS[t] ?? t}
-                        </option>
-                      ))}
-                    </select>
-                    <Button
-                      size="sm"
-                      onClick={() => handleSave(account.id)}
-                      loading={saving}
-                    >
-                      Save
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setEditingId(null)}
-                    >
-                      Cancel
-                    </Button>
+                            <div>
+                              {isDebt ? (
+                                util !== null && account.credit_limit ? (
+                                  <>
+                                    <span style={{ display: "block", height: 6, borderRadius: 3, background: "rgba(255,255,255,0.07)", overflow: "hidden" }}>
+                                      <span style={{ display: "block", height: "100%", width: `${Math.min(util, 100)}%`, background: util >= 70 ? "var(--attention)" : util >= 30 ? "var(--data-1)" : "var(--positive)", borderRadius: 3 }} />
+                                    </span>
+                                    <Numeral style={{ fontSize: 11.5, color: "var(--text-muted)", marginTop: 5, display: "block" }}>
+                                      {util.toFixed(0)}% of {formatCurrency(account.credit_limit)}
+                                    </Numeral>
+                                  </>
+                                ) : (
+                                  <span style={{ fontSize: 12, color: "var(--text-faint)" }}>{account.type === "credit_card" ? "no credit limit set" : ""}</span>
+                                )
+                              ) : null}
+                            </div>
+
+                            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", alignItems: "center" }}>
+                              {isDebt && (
+                                <Button size="sm" variant={account.has_debt_metadata ? "ghost" : "secondary"} onClick={() => setDebtModalAccount(account)}>
+                                  {account.has_debt_metadata ? "Debt details" : "Set APR and minimum"}
+                                </Button>
+                              )}
+                              {!editing && (
+                                <Button size="sm" variant="ghost" onClick={() => handleEdit(account)}>Type</Button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                ) : (
-                  <div
-                    style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "6px" }}
-                  >
-                    <Badge variant="muted">{TYPE_LABELS[account.type] ?? account.type}</Badge>
-                    {!account.has_debt_metadata &&
-                      (account.type === "credit_card" || account.type === "loan") && (
-                        <button
-                          onClick={() => setDebtModalAccount(account)}
-                          style={{
-                            background: "none",
-                            border: "none",
-                            padding: 0,
-                            cursor: "pointer",
-                            fontSize: "12px",
-                            color: theme.colors.accent,
-                            textDecoration: "underline",
-                          }}
-                        >
-                          Set debt details
-                        </button>
-                      )}
-                    {account.has_debt_metadata &&
-                      (account.type === "credit_card" || account.type === "loan") && (
-                        <button
-                          onClick={() => setDebtModalAccount(account)}
-                          style={{
-                            background: "none",
-                            border: "none",
-                            padding: 0,
-                            cursor: "pointer",
-                            fontSize: "12px",
-                            color: theme.colors.textMuted,
-                            textDecoration: "underline",
-                          }}
-                        >
-                          Edit debt details
-                        </button>
-                      )}
-                  </div>
-                )}
-              </div>
-
-              <div style={{ textAlign: "right", flexShrink: 0 }}>
-                {account.latest_balance !== null && (
-                  <Numeral
-                    as="p"
-                    style={{ fontWeight: 600, fontSize: "15px", color: theme.colors.text }}
-                  >
-                    {formatCurrency(account.latest_balance, account.currency)}
-                  </Numeral>
-                )}
-                {editingId !== account.id && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    style={{ marginTop: "6px" }}
-                    onClick={() => handleEdit(account)}
-                  >
-                    Edit
-                  </Button>
-                )}
-              </div>
-            </div>
-          </Card>
-        ))}
-      </main>
+                </Panel>
+              ))}
+          </div>
+        )}
+      </AppShell>
 
       {debtModalAccount && (
         <div
@@ -552,6 +508,6 @@ export function AccountsPage() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

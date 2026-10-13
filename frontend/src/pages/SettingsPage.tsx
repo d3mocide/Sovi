@@ -7,7 +7,7 @@ import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { Badge } from "../components/ui/Badge";
 import { Eyebrow, Numeral } from "../components/ui/Stat";
-import { AppHeader } from "../components/ui/AppChrome";
+import { AppShell } from "../components/ui/AppChrome";
 import { Icon } from "../components/ui/Icon";
 import { theme } from "../theme";
 
@@ -93,33 +93,8 @@ export function SettingsPage() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: theme.colors.bg }}>
-      <AppHeader>
-        <Link
-          to="/"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "6px",
-            fontSize: "13px",
-            color: theme.colors.textMuted,
-          }}
-        >
-          <Icon name="arrowLeft" size={15} />
-          Dashboard
-        </Link>
-      </AppHeader>
-
-      <main
-        style={{
-          padding: "24px",
-          maxWidth: "580px",
-          margin: "0 auto",
-          display: "flex",
-          flexDirection: "column",
-          gap: "20px",
-        }}
-      >
+    <AppShell title="Settings" subtitle="Account, security and data connections" narrow>
+      <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
         {/* Account */}
         <Card>
           <Eyebrow style={{ marginBottom: "14px" }}>Account</Eyebrow>
@@ -246,7 +221,7 @@ export function SettingsPage() {
             Sign out
           </Button>
         </Card>
-      </main>
-    </div>
+      </div>
+    </AppShell>
   );
 }
