@@ -157,10 +157,10 @@ async def _sync_details(db: asyncpg.Connection, client: SureClient, user_id: str
     except (SureExportForbidden, SureAuthError):
         failed = True
         note = "APR and limits are not syncing: the Sure key needs read_write scope and an admin Sure user."
-    except (SureError, ValueError, KeyError) as exc:
+    except Exception as exc:  # noqa: BLE001 - the main sync already succeeded; never let details break it
         failed = True
-        note = f"Could not read account details from Sure: {str(exc)[:150]}"
-        logger.warning("sure details sync user_id=%s: %s", user_id, exc)
+        note = f"Could not read account details from Sure: {str(exc)[:250] or type(exc).__name__}"
+        logger.warning("sure details sync user_id=%s: %s: %s", user_id, type(exc).__name__, exc)
     # A failed attempt is retried in about an hour, not after the full interval.
     stamp = now - (_DETAILS_EVERY - timedelta(hours=1)) if failed else now
     await db.execute("UPDATE sure_credentials SET details_synced_at=$3, details_note=$2 WHERE user_id=$1",

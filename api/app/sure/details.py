@@ -39,7 +39,11 @@ def read_account_records(zip_bytes: bytes) -> dict[str, dict[str, Any]]:
     transaction and balance lines are never parsed.
     """
     out: dict[str, dict[str, Any]] = {}
-    with zipfile.ZipFile(io.BytesIO(zip_bytes)) as z:
+    try:
+        z = zipfile.ZipFile(io.BytesIO(zip_bytes))
+    except zipfile.BadZipFile:
+        raise ValueError("the Sure export was not a valid zip file") from None
+    with z:
         try:
             info = z.getinfo("all.ndjson")
         except KeyError:

@@ -77,7 +77,7 @@ def test_download_follows_redirect_without_sending_the_api_key():
         seen.append((req.url.host, req.headers.get("x-api-key")))
         if req.url.path.endswith("/download"):
             return httpx.Response(302, headers={"location": "https://files.example.net/blob/abc?sig=1"})
-        return httpx.Response(200, content=b"ZIPDATA")
+        return httpx.Response(200, content=b"PK\x03\x04data")
 
     async def go():
         c = SureClient("http://sure.test", "KEY123", transport=httpx.MockTransport(handler))
@@ -86,7 +86,7 @@ def test_download_follows_redirect_without_sending_the_api_key():
         finally:
             await c.aclose()
 
-    assert run(go()) == b"ZIPDATA"
+    assert run(go()) == b"PK\x03\x04data"
     assert seen[0] == ("sure.test", "KEY123")
     assert seen[1] == ("files.example.net", None)
 
@@ -152,3 +152,28 @@ def test_create_export_without_id_is_a_clear_error():
 
     with pytest.raises(SureError):
         run(go())
+
+
+def test_non_zip_download_is_reported_with_where_it_came_from():
+    def handler(req):
+        if req.url.path.endswith("/download"):
+            return httpx.Response(302, headers={"location": "https://sure.test/login?x=secret"})
+        return httpx.Response(200, headers={"content-type": "text/html"}, content=b"<html>sign in</html>")
+
+    async def go():
+        c = SureClient("http://sure.test", "KEY123", transport=httpx.MockTransport(handler))
+        try:
+            await c.download_export("e1")
+        finally:
+            await c.aclose()
+
+    with pytest.raises(SureError) as e:
+        run(go())
+    msg = str(e.value)
+    assert "text/html" in msg and "https://sure.test/login" in msg
+    assert "secret" not in msg and "KEY123" not in msg and "sign in" not in msg
+
+
+def test_bad_zip_bytes_become_a_value_error():
+    with pytest.raises(ValueError):
+        read_account_records(b"not a zip")

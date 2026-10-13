@@ -28,17 +28,29 @@ def _unwrap(body: Any) -> dict:
 EXPORT_MAX_BYTES = 200 * 1024 * 1024
 
 
+def _describe(resp: httpx.Response) -> str:
+    """Where a response came from and what it was, for error notes. Never includes the query string or body."""
+    u = resp.url
+    where = f"{u.scheme}://{u.host}{':' + str(u.port) if u.port else ''}{u.path}"
+    hops = len(resp.history)
+    return f"HTTP {resp.status_code}, {resp.headers.get('content-type', 'no content-type')}, from {where}" + (
+        f" after {hops} redirect(s)" if hops else "")
+
+
 async def _read_capped(client: httpx.AsyncClient, url: httpx.URL, max_bytes: int) -> bytes:
     chunks, size = [], 0
     async with client.stream("GET", url) as resp:
         if resp.status_code >= 400:
-            raise SureError(f"Sure returned HTTP {resp.status_code} for the export file")
+            raise SureError(f"Sure's file server answered {_describe(resp)}")
         async for chunk in resp.aiter_bytes():
             size += len(chunk)
             if size > max_bytes:
                 raise SureError("the Sure export is larger than Sovi will read")
             chunks.append(chunk)
-    return b"".join(chunks)
+        data = b"".join(chunks)
+        if data[:2] != b"PK":
+            raise SureError(f"the export file was not a zip ({_describe(resp)})")
+        return data
 
 
 class SureClient:
@@ -133,6 +145,8 @@ class SureClient:
             raise SureError(f"Sure returned HTTP {resp.status_code} for the export download")
         if len(resp.content) > max_bytes:
             raise SureError("the Sure export is larger than Sovi will read")
+        if resp.content[:2] != b"PK":
+            raise SureError(f"the export download was not a zip ({_describe(resp)})")
         return resp.content
 
     async def ping(self) -> int:
