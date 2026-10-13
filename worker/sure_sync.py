@@ -17,6 +17,7 @@ import asyncpg
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "api"))
 
 from app.auth.crypto import get_master_key  # noqa: E402
+from app.config import settings  # noqa: E402
 from app.sure.client import SureAuthError, SureClient, SureError, SureExportForbidden  # noqa: E402
 from app.sure.details import debt_terms, read_account_records  # noqa: E402
 from app.sure.mapping import account_row, daily_balances, transaction_row  # noqa: E402
@@ -126,6 +127,9 @@ async def _apply_terms(db: asyncpg.Connection, user_id: str, account_id: str, t:
 async def _sync_details(db: asyncpg.Connection, client: SureClient, user_id: str,
                         owed: dict[str, tuple[str, Decimal]], force: bool) -> None:
     """Read APR, minimum payment and limits through a Sure family export. Never fails the main sync."""
+    if not settings.SURE_EXPORT_SYNC:
+        await db.execute("UPDATE sure_credentials SET details_note=NULL WHERE user_id=$1 AND details_note IS NOT NULL", user_id)
+        return
     now = datetime.now(timezone.utc)
     last = await db.fetchval("SELECT details_synced_at FROM sure_credentials WHERE user_id=$1", user_id)
     if last is not None and now - last < (_DETAILS_MIN_GAP if force else _DETAILS_EVERY):

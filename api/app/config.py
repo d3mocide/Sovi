@@ -33,6 +33,11 @@ class Settings(BaseSettings):
     # Use Union[str, List[str]] so pydantic-settings passes raw string to field_validator
     CORS_ORIGINS: Union[str, List[str]] = ["http://localhost:3000"]
 
+    # Read APR/limits through a Sure family export. Off: Sure serves the export file behind a browser login
+    # (API keys are redirected to its sign-in page), so the download cannot work with an API key today,
+    # and every attempt leaves another export in Sure.
+    SURE_EXPORT_SYNC: bool = False
+
     # LiteLLM
     LITELLM_URL: str = "http://litellm:4000"
     LITELLM_KEY: str = "changeme"

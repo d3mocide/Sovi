@@ -177,3 +177,8 @@ def test_non_zip_download_is_reported_with_where_it_came_from():
 def test_bad_zip_bytes_become_a_value_error():
     with pytest.raises(ValueError):
         read_account_records(b"not a zip")
+
+
+def test_export_sync_is_off_by_default():
+    from app.config import settings
+    assert settings.SURE_EXPORT_SYNC is False
