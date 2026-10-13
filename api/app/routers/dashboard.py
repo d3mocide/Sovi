@@ -9,6 +9,7 @@ from pydantic import BaseModel
 
 from app.auth.session import get_current_user
 from app.database import get_db
+from app.money import owed
 from app.payoff.baseline import compute_baseline
 from app.payoff.engine import simulate
 from app.payoff.types import Debt as PayoffDebt
@@ -90,11 +91,7 @@ async def get_dashboard(
     next_focus: Optional[NextFocusDebt] = None
 
     for row in debt_rows:
-        balance = (
-            Decimal(str(row["current_balance"]))
-            if row["current_balance"] is not None
-            else Decimal("0")
-        )
+        balance = owed(row["current_balance"])
         total_debt += balance
 
         if row["current_balance"] is not None and row["apr"] is not None:
@@ -115,11 +112,7 @@ async def get_dashboard(
 
     # Highest APR debt with positive balance is the next focus (avalanche target)
     for row in debt_rows:
-        balance = (
-            Decimal(str(row["current_balance"]))
-            if row["current_balance"] is not None
-            else Decimal("0")
-        )
+        balance = owed(row["current_balance"])
         if balance > 0 and row["apr"] is not None:
             next_focus = NextFocusDebt(
                 account_id=str(row["id"]),

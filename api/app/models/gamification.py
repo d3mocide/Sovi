@@ -12,10 +12,16 @@ class DebtProgress(BaseModel):
     name: str
     current_balance: Decimal
     original_principal: Optional[Decimal]   # from debt_metadata
-    peak_balance: Optional[Decimal]         # max balance ever seen in snapshots
+    peak_balance: Optional[Decimal]         # most ever owed, from snapshots
     progress_pct: float                     # 0.0-100.0
     payoff_month: Optional[int]             # from engine
     apr: Optional[Decimal]
+    min_payment_type: Optional[str] = None  # "fixed" | "percent", from debt_metadata
+    min_payment_value: Optional[Decimal] = None
+    min_payment_floor: Optional[Decimal] = None
+    credit_limit: Optional[Decimal] = None
+    utilization_pct: Optional[float] = None  # owed / credit_limit, cards only
+    monthly_interest: Optional[Decimal] = None
 
 
 class TrendPoint(BaseModel):

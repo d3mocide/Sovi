@@ -24,6 +24,12 @@ function formatCurrency(n: number): string {
   }).format(n);
 }
 
+// Compact axis money that never collapses distinct ticks: $850, $1.2k, $12k
+function formatAxisMoney(v: number): string {
+  if (Math.abs(v) < 1000) return `$${Math.round(v)}`;
+  return `$${(v / 1000).toFixed(Math.abs(v) >= 10000 ? 0 : 1)}k`;
+}
+
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
@@ -62,14 +68,16 @@ export function TrendChart({ trend }: TrendChartProps) {
             tick={{ fill: "var(--text-muted)", fontSize: 11, fontFamily: "var(--font-mono)" }}
             axisLine={false}
             tickLine={false}
-            interval="preserveStartEnd"
+            interval="equidistantPreserveStart"
+            minTickGap={36}
           />
           <YAxis
             tick={{ fill: "var(--text-muted)", fontSize: 11, fontFamily: "var(--font-mono)" }}
             axisLine={false}
             tickLine={false}
-            tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
-            width={48}
+            tickFormatter={formatAxisMoney}
+            domain={[0, "auto"]}
+            width={52}
           />
           <Tooltip
             contentStyle={{

@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends
 
 from app.auth.session import get_current_user
 from app.database import get_db
+from app.money import owed
 from app.models.gamification import (
     DebtProgress,
     GamificationResponse,
@@ -39,11 +40,11 @@ async def get_gamification(
     debt_rows = await db.fetch(
         """
         SELECT
-            a.id, a.name, a.type,
+            a.id, a.name, a.type, a.credit_limit,
             dm.apr, dm.original_principal,
             dm.min_payment_type, dm.min_payment_value, dm.min_payment_floor,
             bs.balance as current_balance,
-            (SELECT MAX(balance) FROM balance_snapshots WHERE account_id = a.id AND user_id = $1) as peak_balance
+            (SELECT MIN(balance) FROM balance_snapshots WHERE account_id = a.id) as lowest_signed_balance
         FROM accounts a
         LEFT JOIN debt_metadata dm ON dm.account_id = a.id
         LEFT JOIN LATERAL (
@@ -77,7 +78,7 @@ async def get_gamification(
             payoff_debts.append(
                 PayoffDebt(
                     id=str(row["id"]),
-                    balance=Decimal(str(row["current_balance"])),
+                    balance=owed(row["current_balance"]),
                     apr=Decimal(str(row["apr"])),
                     min_payment_type=row["min_payment_type"],
                     min_payment_value=Decimal(str(row["min_payment_value"])),
@@ -113,18 +114,16 @@ async def get_gamification(
     # 3. Build per-debt progress
     debt_progress: list[DebtProgress] = []
     for row in debt_rows:
-        balance = (
-            Decimal(str(row["current_balance"]))
-            if row["current_balance"] is not None
-            else Decimal("0")
-        )
+        balance = owed(row["current_balance"])
         original = (
             Decimal(str(row["original_principal"])) if row["original_principal"] else None
         )
-        peak = Decimal(str(row["peak_balance"])) if row["peak_balance"] else None
+        peak = owed(row["lowest_signed_balance"]) or None  # the most ever owed
         denom = original or peak or balance
         progress_pct = float((1 - balance / denom) * 100) if denom and denom > 0 else 0.0
         progress_pct = max(0.0, min(100.0, progress_pct))
+        apr = Decimal(str(row["apr"])) if row["apr"] is not None else None
+        limit = Decimal(str(row["credit_limit"])) if row["credit_limit"] else None
         debt_progress.append(
             DebtProgress(
                 account_id=str(row["id"]),
@@ -134,24 +133,33 @@ async def get_gamification(
                 peak_balance=peak,
                 progress_pct=round(progress_pct, 2),
                 payoff_month=payoff_month_map.get(str(row["id"])),
-                apr=Decimal(str(row["apr"])) if row["apr"] else None,
+                apr=apr,
+                min_payment_type=row["min_payment_type"],
+                min_payment_value=row["min_payment_value"],
+                min_payment_floor=row["min_payment_floor"],
+                credit_limit=limit,
+                utilization_pct=round(float(balance / limit * 100), 1) if limit and row["type"] == "credit_card" else None,
+                monthly_interest=(balance * apr / Decimal("1200")).quantize(Decimal("0.01")) if apr is not None else None,
             )
         )
 
     # 4. Total debt trend (last 90 days, daily aggregated by day)
+    # One point per day: each debt account's most recent snapshot at the end of that day, carried
+    # forward over days with no snapshot, summed as amount owed.
     trend_rows = await db.fetch(
         """
-        SELECT
-            DATE(bs.captured_at) as snap_date,
-            SUM(bs.balance) as total_balance
-        FROM balance_snapshots bs
-        JOIN accounts a ON a.id = bs.account_id
-        WHERE bs.user_id = $1
-          AND a.type IN ('credit_card', 'loan')
-          AND a.archived = false
-          AND bs.captured_at >= NOW() - INTERVAL '90 days'
-        GROUP BY DATE(bs.captured_at)
-        ORDER BY snap_date ASC
+        SELECT d::date AS snap_date,
+               COALESCE(SUM(GREATEST(-s.balance, 0)), 0) AS total_balance
+        FROM generate_series(CURRENT_DATE - 89, CURRENT_DATE, interval '1 day') AS d
+        CROSS JOIN accounts a
+        LEFT JOIN LATERAL (
+            SELECT balance FROM balance_snapshots
+            WHERE account_id = a.id AND captured_at < d + interval '1 day'
+            ORDER BY captured_at DESC LIMIT 1
+        ) s ON true
+        WHERE a.user_id = $1 AND a.type IN ('credit_card', 'loan') AND a.archived = false
+        GROUP BY d
+        ORDER BY d
         """,
         user_id,
     )

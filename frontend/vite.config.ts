@@ -35,7 +35,7 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      "/api": { target: "http://localhost:8000", rewrite: (p) => p.replace(/^\/api/, "") }
+      "/api": { target: process.env.API_PROXY ?? "http://localhost:8000", rewrite: (p) => p.replace(/^\/api/, "") }
     }
   }
 });

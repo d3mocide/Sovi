@@ -41,9 +41,9 @@ export function SimulatorPage() {
         id: d.account_id,
         balance: Number(d.current_balance),
         apr: Number(d.apr),
-        minPaymentType: "percent" as const,
-        minPaymentValue: 1,
-        minPaymentFloor: 25,
+        minPaymentType: (d.min_payment_type ?? "percent") as "fixed" | "percent",
+        minPaymentValue: Number(d.min_payment_value ?? 1),
+        minPaymentFloor: d.min_payment_floor != null ? Number(d.min_payment_floor) : 25,
       }));
   }, [gamData]);
 

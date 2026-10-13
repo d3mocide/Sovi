@@ -8,6 +8,7 @@ from typing import Annotated
 import asyncpg
 from fastapi import APIRouter, Depends, HTTPException, Response
 
+from app.money import to_signed
 from app.auth.session import get_current_user
 from app.database import get_db
 from app.models.simplefin import AccountResponse, ManualAccountRequest, UpdateAccountRequest
@@ -45,7 +46,10 @@ async def create_manual_account(
     )
 
     balance_date: datetime | None = None
-    latest_balance = body.initial_balance
+    # What the user types for a card or loan is what they owe; it is stored negative (see app/money.py)
+    latest_balance = (
+        to_signed(body.type, body.initial_balance) if body.initial_balance is not None else None
+    )
 
     if body.initial_balance is not None:
         balance_date = datetime.now(tz=timezone.utc)
@@ -55,7 +59,7 @@ async def create_manual_account(
             VALUES ($1, $2, $3)
             """,
             account_id,
-            body.initial_balance,
+            latest_balance,
             balance_date,
         )
 

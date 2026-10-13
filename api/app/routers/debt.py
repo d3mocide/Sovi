@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 
 from app.auth.session import get_current_user
 from app.database import get_db
+from app.money import owed
 from app.models.debt import DebtMetadataRequest, DebtMetadataResponse
 
 router = APIRouter(tags=["debt"])
@@ -27,7 +28,7 @@ def _compute_fields(
     if current_balance is None:
         return None, None, None
 
-    balance = Decimal(str(current_balance))
+    balance = owed(current_balance)  # balances are signed; a debt's amount owed is positive
 
     # monthly_interest = balance * (apr / 100 / 12)
     monthly_interest = balance * (apr / Decimal("100") / Decimal("12"))
