@@ -96,8 +96,8 @@ export function useAuth() {
     [fetchMe]
   );
 
-  const disableTotp = useCallback(async (): Promise<User> => {
-    const result = await api.post<User>("/auth/totp/disable");
+  const disableTotp = useCallback(async (code: string): Promise<User> => {
+    const result = await api.post<User>("/auth/totp/disable", { code });
     await fetchMe();
     return result;
   }, [fetchMe]);

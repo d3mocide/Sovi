@@ -79,7 +79,8 @@ async def get_current_user(
     if row is None:
         raise HTTPException(status_code=401, detail="User not found")
 
-    if row["totp_enabled"] and not session.get("totp_verified"):
+    # Password alone never opens the API: TOTP must be enrolled and verified in this session
+    if not session.get("totp_verified"):
         raise HTTPException(status_code=401, detail="TOTP verification required")
 
     return dict(row)

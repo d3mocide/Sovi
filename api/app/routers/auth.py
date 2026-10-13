@@ -41,6 +41,8 @@ from app.models.auth import (
 
 router = APIRouter(tags=["auth"])
 
+_REGISTER_LOCK = 724001
+
 
 # ---------------------------------------------------------------------------
 # Registration
@@ -65,6 +67,15 @@ async def register(
             status_code=422, detail="Password must be at least 12 characters"
         )
 
+    # Serialise registrations so two simultaneous requests cannot both pass the first-account check
+    await db.execute("SELECT pg_advisory_lock($1)", _REGISTER_LOCK)
+    try:
+        return await _register_locked(body, db)
+    finally:
+        await db.execute("SELECT pg_advisory_unlock($1)", _REGISTER_LOCK)
+
+
+async def _register_locked(body: RegisterRequest, db: asyncpg.Connection) -> RegisterResponse:
     if not settings.ALLOW_REGISTRATION:
         if await db.fetchval("SELECT COUNT(*) FROM users") > 0:
             raise HTTPException(status_code=403, detail="Registration is closed")
@@ -151,7 +162,10 @@ async def login(
     user_id = str(row["id"])
     totp_enabled = row["totp_enabled"]
 
-    # 5. Create partial session (totp_verified=False)
+    # 5. Create partial session (totp_verified=False); drop any session this browser already had
+    old_token = request.cookies.get("sovi_session")
+    if old_token:
+        await delete_session(redis, old_token)
     token = await create_session(redis, user_id, totp_verified=False)
     set_session_cookie(response, token, secure=settings.COOKIE_SECURE)
 
@@ -198,6 +212,10 @@ async def totp_enroll(
 
     if row is None:
         raise HTTPException(status_code=401, detail="User not found")
+
+    # A password-only session must never be able to replace an active second factor.
+    if row["totp_enabled"]:
+        raise HTTPException(status_code=409, detail="TOTP is already enabled")
 
     # Generate secret
     secret = generate_totp_secret()
@@ -268,6 +286,11 @@ async def totp_verify(
 
     # Verify the code
     if not verify_totp_code(secret, body.code):
+        await increment_rate_limit(redis, rate_key)
+        raise HTTPException(status_code=401, detail="Invalid TOTP code")
+
+    # A code is single-use: refuse a replay inside its validity window
+    if not await redis.set(f"totp_used:{user_id}:{body.code}", "1", ex=120, nx=True):
         await increment_rate_limit(redis, rate_key)
         raise HTTPException(status_code=401, detail="Invalid TOTP code")
 
@@ -358,13 +381,28 @@ async def setup_status(
 
 @router.post("/totp/disable", response_model=MeResponse)
 async def totp_disable(
+    body: TotpVerifyRequest,
     request: Request,
     db: Annotated[asyncpg.Connection, Depends(get_db)],
     user: Annotated[dict, Depends(get_current_user)],
     _csrf: Annotated[None, Depends(verify_csrf)],
 ) -> MeResponse:
-    """Disable TOTP for the current user."""
+    """Disable TOTP for the current user. Needs a current code, so a hijacked session cannot strip it."""
     user_id = str(user["id"])
+    redis = request.app.state.redis
+    rate_key = f"totp:{user_id}"
+    await check_rate_limit(redis, rate_key)
+
+    row = await db.fetchrow("SELECT totp_secret_enc FROM users WHERE id = $1", user_id)
+    try:
+        secret = decrypt_secret(bytes(row["totp_secret_enc"]), get_master_key()).decode()
+    except Exception:
+        raise HTTPException(status_code=400, detail="TOTP is not set up")
+    if not verify_totp_code(secret, body.code):
+        await increment_rate_limit(redis, rate_key)
+        raise HTTPException(status_code=401, detail="Invalid TOTP code")
+    await reset_rate_limit(redis, rate_key)
+
     try:
         await db.execute(
             "UPDATE users SET totp_enabled = false, totp_secret_enc = NULL WHERE id = $1",

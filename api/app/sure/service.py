@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ipaddress
 from urllib.parse import urlparse
 
 import asyncpg
@@ -19,6 +20,17 @@ def normalise_base_url(url: str) -> str:
     p = urlparse(u)
     if p.scheme not in ("http", "https") or not p.netloc:
         raise ValueError("Sure URL must start with http:// or https://")
+    if "@" in p.netloc:
+        raise ValueError("Sure URL must not contain credentials")
+    host = p.hostname or ""
+    try:
+        ip = ipaddress.ip_address(host)
+    except ValueError:
+        ip = None
+    if host.lower() == "metadata.google.internal" or (
+        ip is not None and (ip.is_link_local or ip.is_unspecified or ip.is_multicast)
+    ):
+        raise ValueError("Sure URL points at an address Sovi will not call")
     return f"{p.scheme}://{p.netloc}"
 
 

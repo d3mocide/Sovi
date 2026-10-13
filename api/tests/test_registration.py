@@ -12,6 +12,9 @@ class FakeDb:
     def __init__(self, users):
         self.users = users
 
+    async def execute(self, sql, *args):
+        return None
+
     async def fetchval(self, sql, *args):
         return self.users if "COUNT" in sql else None
 

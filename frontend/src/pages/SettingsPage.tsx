@@ -31,9 +31,11 @@ export function SettingsPage() {
   const [disablingTotp, setDisablingTotp] = useState(false);
 
   const handleDisableTotp = async () => {
+    const code = window.prompt("Enter a current code from your authenticator app to turn off two-factor auth:");
+    if (!code) return;
     setDisablingTotp(true);
     try {
-      await disableTotp();
+      await disableTotp(code.trim());
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to disable TOTP");
     } finally {

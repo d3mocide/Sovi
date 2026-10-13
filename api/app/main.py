@@ -5,11 +5,12 @@ from contextlib import asynccontextmanager
 import redis.asyncio as aioredis
 from arq import create_pool as arq_create_pool
 from arq.connections import RedisSettings
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 
 from app.auth.crypto import get_master_key
+from app.auth.csrf import verify_csrf
 from app.config import settings
 from app.database import close_db, init_db
 from app.routers import health
@@ -71,14 +72,14 @@ app.add_middleware(
 
 app.include_router(health.router)
 app.include_router(auth_router.router, prefix="/auth")
-app.include_router(simplefin_router.router, prefix="/simplefin")
-app.include_router(sure_router.router, prefix="/sure")
-app.include_router(spending_router.router)
-app.include_router(accounts_router.router, prefix="/accounts")
-app.include_router(debt_router.router)
-app.include_router(simulate_router.router)
-app.include_router(categories_router.router)
-app.include_router(transactions_router.router, prefix="/transactions")
-app.include_router(gamification_router.router)
-app.include_router(dashboard_router.router)
-app.include_router(scenarios_router.router)
+app.include_router(simplefin_router.router, prefix="/simplefin", dependencies=[Depends(verify_csrf)])
+app.include_router(sure_router.router, prefix="/sure", dependencies=[Depends(verify_csrf)])
+app.include_router(spending_router.router, dependencies=[Depends(verify_csrf)])
+app.include_router(accounts_router.router, prefix="/accounts", dependencies=[Depends(verify_csrf)])
+app.include_router(debt_router.router, dependencies=[Depends(verify_csrf)])
+app.include_router(simulate_router.router, dependencies=[Depends(verify_csrf)])
+app.include_router(categories_router.router, dependencies=[Depends(verify_csrf)])
+app.include_router(transactions_router.router, prefix="/transactions", dependencies=[Depends(verify_csrf)])
+app.include_router(gamification_router.router, dependencies=[Depends(verify_csrf)])
+app.include_router(dashboard_router.router, dependencies=[Depends(verify_csrf)])
+app.include_router(scenarios_router.router, dependencies=[Depends(verify_csrf)])
