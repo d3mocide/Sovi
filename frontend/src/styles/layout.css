@@ -106,3 +106,43 @@ body {
   .grid-12 { gap: 12px; }
   .span-3 { grid-column: span 6; }
 }
+
+/* ---- Payoff plan rows: one line on laptops, stacked cards on phones ---- */
+.plan-row {
+  display: grid;
+  grid-template-columns: 34px minmax(120px, 1.6fr) 1fr 1fr 1fr auto;
+  grid-template-areas: "rank name bal min pay gone";
+  gap: 12px; align-items: center;
+}
+.plan-row .c-rank { grid-area: rank; } .plan-row .c-name { grid-area: name; }
+.plan-row .c-bal { grid-area: bal; text-align: right; } .plan-row .c-min { grid-area: min; text-align: right; }
+.plan-row .c-pay { grid-area: pay; text-align: right; } .plan-row .c-gone { grid-area: gone; }
+@media (max-width: 860px) {
+  .plan-row {
+    grid-template-columns: 34px minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas: "rank name name" ". bal pay" ". min gone";
+    row-gap: 10px;
+  }
+  .plan-row .c-bal, .plan-row .c-min { text-align: left; }
+  .plan-row .c-gone { justify-content: flex-end; }
+}
+
+/* Never let a child force the page wider than the screen */
+.grid-12 > * { min-width: 0; }
+.app-main { overflow-x: clip; }
+
+/* ---- Method comparison table: 5 columns on laptops, 3 on phones ---- */
+.cmp-row { display: grid; grid-template-columns: 1.5fr 1.3fr 1fr 1fr 1fr; gap: 12px; align-items: center; }
+.cmp-row .c-focus-inline { display: none; }
+@media (max-width: 860px) {
+  .cmp-row { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 1fr); }
+  .cmp-row .c-focus, .cmp-row .c-win { display: none; }
+  .cmp-row .c-focus-inline { display: block; font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+}
+
+/* ---- Spending: credit-share table ---- */
+.credit-row { display: grid; grid-template-columns: minmax(110px, 1.4fr) 1fr 1.4fr 1fr; gap: 14px; align-items: center; }
+@media (max-width: 860px) {
+  .credit-row { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+  .credit-row .c-bar { display: none; }
+}

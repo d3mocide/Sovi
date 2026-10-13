@@ -139,22 +139,25 @@ export function SpendingPage() {
           </Panel>
 
           <Panel className="span-7" title="Where credit comes from" aside="share of each category put on cards">
-            <div style={{ display: "grid", gridTemplateColumns: "minmax(110px, 1.4fr) 1fr 1.4fr 1fr", gap: 14, padding: "0 2px 8px", fontSize: 11, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-muted)", borderBottom: "1px solid var(--glass-border)" }}>
-              <span>Category</span><span style={{ textAlign: "right" }}>Avg / month</span><span>On cards</span><span style={{ textAlign: "right" }}>On cards / mo</span>
+            <div className="credit-row" style={{ padding: "0 2px 8px", fontSize: 11, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-muted)", borderBottom: "1px solid var(--glass-border)" }}>
+              <span>Category</span><span style={{ textAlign: "right" }}>Avg / mo</span><span className="c-bar">On cards</span><span style={{ textAlign: "right" }}>On cards</span>
             </div>
             {[...named].sort((a, b) => b.avg_month * b.card_share - a.avg_month * a.card_share).slice(0, 9).map((c) => (
-              <div key={c.name} style={{ display: "grid", gridTemplateColumns: "minmax(110px, 1.4fr) 1fr 1.4fr 1fr", gap: 14, alignItems: "center", padding: "11px 2px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+              <div key={c.name} className="credit-row" style={{ padding: "11px 2px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
                 <span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 14, color: "var(--text-strong)" }}>
                   <span style={{ width: 8, height: 8, borderRadius: 2, background: colorOf(c.name) }} />{c.name}
                 </span>
                 <Numeral style={{ textAlign: "right", fontSize: 14 }}>{money(c.avg_month)}</Numeral>
-                <span>
+                <span className="c-bar">
                   <span style={{ display: "block", height: 6, borderRadius: 3, background: "rgba(255,255,255,0.07)", overflow: "hidden" }}>
                     <span style={{ display: "block", height: "100%", width: `${Math.round(c.card_share * 100)}%`, background: c.card_share > 0.7 ? "var(--attention)" : "var(--data-1)" }} />
                   </span>
                   <Numeral style={{ fontSize: 11.5, color: "var(--text-muted)", marginTop: 4, display: "block" }}>{Math.round(c.card_share * 100)}% on cards</Numeral>
                 </span>
-                <Numeral style={{ textAlign: "right", fontSize: 14, color: "var(--attention)" }}>{money(c.avg_month * c.card_share)}</Numeral>
+                <span style={{ textAlign: "right" }}>
+                  <Numeral style={{ fontSize: 14, color: "var(--attention)" }}>{money(c.avg_month * c.card_share)}</Numeral>
+                  <span style={{ display: "block", fontSize: 11, color: "var(--text-muted)" }}>{Math.round(c.card_share * 100)}% of it</span>
+                </span>
               </div>
             ))}
           </Panel>

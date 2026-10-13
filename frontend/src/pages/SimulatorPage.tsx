@@ -132,11 +132,11 @@ export function SimulatorPage() {
           </Panel>
 
           <Panel className="span-8" title="Compare the methods" aside={`same ${money(extra)} extra for each`}>
-            <div style={{ overflowX: "auto" }}>
-              <div style={{ minWidth: 640 }}>
-                <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1.3fr 1fr 1fr 1fr", gap: 12, paddingBottom: 8, borderBottom: "1px solid var(--glass-border)" }}>
-                  <span style={head}>Method</span><span style={head}>Focus first</span>
-                  <span style={{ ...head, textAlign: "right" }}>Debt-free</span><span style={{ ...head, textAlign: "right" }}>Interest</span><span style={{ ...head, textAlign: "right" }}>First win</span>
+            <div>
+              <div>
+                <div className="cmp-row" style={{ paddingBottom: 8, borderBottom: "1px solid var(--glass-border)" }}>
+                  <span style={head}>Method</span><span className="c-focus" style={head}>Focus first</span>
+                  <span style={{ ...head, textAlign: "right" }}>Debt-free</span><span style={{ ...head, textAlign: "right" }}>Interest</span><span className="c-win" style={{ ...head, textAlign: "right" }}>First win</span>
                 </div>
                 {runs.map((r) => {
                   const m = METHODS.find((x) => x.id === r.method)!;
@@ -146,8 +146,9 @@ export function SimulatorPage() {
                     <div
                       key={r.method}
                       onClick={() => setMethod(r.method)}
+                      className="cmp-row"
                       style={{
-                        display: "grid", gridTemplateColumns: "1.5fr 1.3fr 1fr 1fr 1fr", gap: 12, alignItems: "center", padding: "12px 8px", margin: "0 -8px",
+                        padding: "12px 8px", margin: "0 -8px",
                         borderBottom: "1px solid rgba(255,255,255,0.05)", cursor: "pointer", borderRadius: 10,
                         background: active ? "rgba(255,255,255,0.06)" : "transparent", boxShadow: active ? "inset 2px 0 0 var(--accent)" : "none",
                       }}
@@ -159,8 +160,9 @@ export function SimulatorPage() {
                           {fastest === r.method && <Badge variant="accent">Fastest</Badge>}
                           {quickestWin === r.method && <Badge variant="warning">Quickest win</Badge>}
                         </span>
+                        <span className="c-focus-inline">Focus: {first?.name}</span>
                       </span>
-                      <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>
+                      <span className="c-focus" style={{ fontSize: 13, color: "var(--text-secondary)" }}>
                         {first?.name}
                         {r.method !== "avalanche" && r.order.join() === runs[0].order.join() && (
                           <span style={{ display: "block", fontSize: 11, color: "var(--text-faint)", marginTop: 3 }}>same order as Avalanche</span>
@@ -168,7 +170,7 @@ export function SimulatorPage() {
                       </span>
                       <Numeral style={{ textAlign: "right", fontSize: 13.5 }}>{r.result.hitHorizon ? "never" : dateIn(r.result.totalMonths)}</Numeral>
                       <Numeral style={{ textAlign: "right", fontSize: 13.5, color: "var(--attention)" }}>{money(r.result.totalInterest)}</Numeral>
-                      <Numeral style={{ textAlign: "right", fontSize: 13.5 }}>{r.firstWinMonth != null ? monthsToText(r.firstWinMonth) : "n/a"}</Numeral>
+                      <span className="c-win" style={{ textAlign: "right" }}><Numeral style={{ fontSize: 13.5 }}>{r.firstWinMonth != null ? monthsToText(r.firstWinMonth) : "n/a"}</Numeral></span>
                     </div>
                   );
                 })}
@@ -199,36 +201,36 @@ export function SimulatorPage() {
               return (
                 <div
                   key={id}
+                  className="plan-row"
                   style={{
-                    display: "grid", gridTemplateColumns: "34px minmax(120px, 1.6fr) 1fr 1fr 1fr auto", gap: 12, alignItems: "center",
                     padding: "13px 10px", margin: "0 -10px", borderRadius: 12,
                     background: isFocus ? "rgba(94,234,212,0.07)" : "transparent",
                     border: isFocus ? "1px solid rgba(94,234,212,0.22)" : "1px solid transparent",
                     borderBottom: isFocus ? undefined : "1px solid rgba(255,255,255,0.05)",
                   }}
                 >
-                  <span style={{ width: 26, height: 26, borderRadius: 8, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 600, background: isFocus ? "var(--positive)" : "rgba(255,255,255,0.08)", color: isFocus ? "#06231f" : "var(--text-secondary)" }}>{i + 1}</span>
-                  <span>
+                  <span className="c-rank" style={{ width: 26, height: 26, borderRadius: 8, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 600, background: isFocus ? "var(--positive)" : "rgba(255,255,255,0.08)", color: isFocus ? "#06231f" : "var(--text-secondary)" }}>{i + 1}</span>
+                  <span className="c-name">
                     <span style={{ fontSize: 14, fontWeight: 500, color: "var(--text-strong)" }}>{d.name}</span>
                     {isFocus && <span style={{ display: "block", fontSize: 11.5, color: "var(--positive)", marginTop: 3 }}>Focus: extra money goes here</span>}
                     {d.limit != null && <span style={{ display: "block", fontSize: 11.5, color: "var(--text-muted)", marginTop: 3 }}>{Math.round((d.balance / d.limit) * 100)}% of {money(d.limit)} limit</span>}
                   </span>
-                  <span style={{ textAlign: "right" }}>
+                  <span className="c-bal">
                     <Numeral style={{ fontSize: 13.5 }}>{money(d.balance)}</Numeral>
                     <span style={{ display: "block", fontSize: 11.5, color: "var(--text-muted)" }}>{d.apr.toFixed(2)}% APR</span>
                   </span>
-                  <span style={{ textAlign: "right" }}>
+                  <span className="c-min">
                     <span style={{ ...head, display: "block", fontSize: 10 }}>Minimum</span>
                     <Numeral style={{ fontSize: 13.5 }}>{money(d.minPayment, 2)}</Numeral>
                   </span>
-                  <span style={{ textAlign: "right" }}>
+                  <span className="c-pay">
                     <span style={{ ...head, display: "block", fontSize: 10 }}>Pay now</span>
                     <Numeral style={{ fontSize: 15, fontWeight: 600, color: isFocus ? "var(--positive)" : "var(--text-strong)" }}>{money(pay, 2)}</Numeral>
                   </span>
-                  <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <span style={{ textAlign: "right", minWidth: 74 }}>
+                  <span className="c-gone" style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "flex-end" }}>
+                    <span style={{ textAlign: "right" }}>
                       <span style={{ ...head, display: "block", fontSize: 10 }}>Gone by</span>
-                      <Numeral style={{ fontSize: 13 }}>{dateIn(res?.payoffMonth ?? null)}</Numeral>
+                      <Numeral style={{ fontSize: 13, whiteSpace: "nowrap" }}>{dateIn(res?.payoffMonth ?? null)}</Numeral>
                     </span>
                     {method === "custom" && (
                       <span style={{ display: "inline-flex", flexDirection: "column", gap: 2 }}>
