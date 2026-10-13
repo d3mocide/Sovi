@@ -16,6 +16,7 @@ export interface DebtProgress {
   credit_limit: number | null;
   utilization_pct: number | null;
   monthly_interest: number | null;
+  account_type: "credit_card" | "loan" | null;
 }
 
 export interface TrendPoint {

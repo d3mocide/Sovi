@@ -22,6 +22,7 @@ class DebtProgress(BaseModel):
     credit_limit: Optional[Decimal] = None
     utilization_pct: Optional[float] = None  # owed / credit_limit, cards only
     monthly_interest: Optional[Decimal] = None
+    account_type: Optional[str] = None       # credit_card | loan
 
 
 class TrendPoint(BaseModel):

@@ -6,6 +6,7 @@ import { TotpPage } from "./pages/TotpPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { AccountsPage } from "./pages/AccountsPage";
 import { SimulatorPage } from "./pages/SimulatorPage";
+import { SpendingPage } from "./pages/SpendingPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { theme } from "./theme";
 
@@ -70,6 +71,14 @@ export default function App() {
           element={
             <Protected>
               <AccountsPage />
+            </Protected>
+          }
+        />
+        <Route
+          path="/spending"
+          element={
+            <Protected>
+              <SpendingPage />
             </Protected>
           }
         />

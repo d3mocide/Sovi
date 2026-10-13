@@ -138,6 +138,7 @@ async def get_gamification(
                 min_payment_value=row["min_payment_value"],
                 min_payment_floor=row["min_payment_floor"],
                 credit_limit=limit,
+                account_type=row["type"],
                 utilization_pct=round(float(balance / limit * 100), 1) if limit and row["type"] == "credit_card" else None,
                 monthly_interest=(balance * apr / Decimal("1200")).quantize(Decimal("0.01")) if apr is not None else None,
             )
