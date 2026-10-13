@@ -2,6 +2,9 @@
 
 **Your numbers. Your stack. Your control.**
 
+[![CI](https://github.com/d3mocide/Sovi/actions/workflows/ci.yml/badge.svg)](https://github.com/d3mocide/Sovi/actions/workflows/ci.yml)
+[![License: AGPL v3](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
+
 Sovi is a self-hosted debt payoff and spending tracker. It shows what you owe, which debt to attack first and when you will be free of it, and it connects your spending to the plan: how much of what you spend ends up on a credit card, and what changes if you spend less.
 
 It runs on your own hardware, keeps your data in your own Postgres, and reads from the finance tools you already use rather than replacing them.
@@ -46,6 +49,23 @@ Connect Sure in *Settings*: give it your Sure URL and a read-only API key. The k
 
 You need Docker (or rootless Podman) with Compose.
 
+### From a release (no build)
+
+Each [release](https://github.com/d3mocide/Sovi/releases) publishes ready-made images (`ghcr.io/d3mocide/sovi-api`, `sovi-worker`, `sovi-frontend`). Download `docker-compose.release.yml` and `.env.example` from the release page, then:
+
+```bash
+mkdir -p secrets
+openssl rand -hex 32 > secrets/master_key.txt     # encrypts stored credentials; back it up
+openssl rand -hex 24 > secrets/db_password.txt
+chmod 700 secrets && chmod 644 secrets/*.txt      # the app runs as a non-root user inside the container
+cp .env.example .env                              # set SECRET_KEY (openssl rand -hex 32) and SOVI_VERSION (for example 0.1.0)
+docker compose -f docker-compose.release.yml up -d
+```
+
+The web port listens on `127.0.0.1:8080` by default. Set `SOVI_BIND` (for example to a LAN address) and `SOVI_PORT` in `.env` to change it, and put a reverse proxy with HTTPS in front. To update, change `SOVI_VERSION` and run the same command again.
+
+### From source
+
 ```bash
 git clone https://github.com/d3mocide/Sovi && cd Sovi
 
@@ -61,7 +81,7 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-Open the site and create the admin account on the first screen. By default the web container publishes port 80; to change that, use a compose override.
+Open the site and create the admin account on the first screen. When building from source the web container publishes port 80; to change that, use a compose override.
 
 **Behind HTTPS:** put it behind a reverse proxy and keep `COOKIE_SECURE=true` (the default). Set `COOKIE_SECURE=false` only for plain-HTTP development, because browsers will not store a `Secure` cookie over HTTP.
 
@@ -106,8 +126,16 @@ Sovi is a young project that one person uses and is actively developing.
 
 Working: the dashboard, payoff plan with five methods, windfall and balance-transfer what-ifs, spending analysis, the Sure source, SimpleFIN, manual accounts, login with optional TOTP.
 
-Not yet: saving what-ifs with a plan, a net-worth view, writing category suggestions back to Sure, and a published license (all rights reserved until one is added).
+Not yet: saving what-ifs with a plan, a net-worth view, and writing category suggestions back to Sure.
 
 ## Design
 
 The brand guidelines, logo and tokens are in [`brand/`](brand/). The look is a graphite base with soft glows and frosted-glass panels; blue marks navigation and focus, mint means progress, violet carries chart data and amber means "look at this".
+
+## Releases and CI
+
+Every push and pull request runs the API tests, the payoff-engine tests, the frontend type-check and build, and a test build of all three Docker images. Pushing a tag like `v0.1.0` runs the same checks and then publishes the images to GitHub's container registry and creates a GitHub Release with the compose file attached. GitHub Actions in the workflows are pinned to exact commit SHAs.
+
+## License
+
+Sovi is free software under the [GNU Affero General Public License v3.0](LICENSE). You can use, study, change and share it. If you run a modified version as a network service, the AGPL requires you to offer your users the source of your changes.

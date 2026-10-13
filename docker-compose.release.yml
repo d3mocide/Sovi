@@ -1,0 +1,95 @@
+# Pull-only compose file for a published release. See docker-compose.yml to build from source.
+secrets:
+  master_key:
+    file: ./secrets/master_key.txt
+  db_password:
+    file: ./secrets/db_password.txt
+
+networks:
+  internal:
+
+volumes:
+  postgres_data:
+  redis_data:
+
+services:
+  frontend:
+    image: ghcr.io/d3mocide/sovi-frontend:${SOVI_VERSION:?set SOVI_VERSION in .env, for example 0.1.0}
+    restart: unless-stopped
+    ports:
+      - "${SOVI_BIND:-127.0.0.1}:${SOVI_PORT:-8080}:80"
+    networks:
+      - internal
+
+  api:
+    image: ghcr.io/d3mocide/sovi-api:${SOVI_VERSION:?set SOVI_VERSION in .env}
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DB_PASSWORD_FILE: /run/secrets/db_password
+      MASTER_KEY_FILE: /run/secrets/master_key
+    secrets:
+      - master_key
+      - db_password
+    networks:
+      - internal
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    image: ghcr.io/d3mocide/sovi-worker:${SOVI_VERSION:?set SOVI_VERSION in .env}
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DB_PASSWORD_FILE: /run/secrets/db_password
+      MASTER_KEY_FILE: /run/secrets/master_key
+      PYTHONPATH: /app:/api
+    secrets:
+      - master_key
+      - db_password
+    networks:
+      - internal
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-sovi}
+      POSTGRES_USER: ${DB_USER:-sovi}
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    secrets:
+      - db_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-sovi} -d ${DB_NAME:-sovi}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s

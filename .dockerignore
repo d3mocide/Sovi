@@ -1,0 +1,16 @@
+# Keep secrets and local state out of every image build that uses the repo root as its context.
+.git
+.github
+.env
+.env.*
+!.env.example
+secrets/
+**/node_modules
+**/dist
+**/__pycache__
+**/.pytest_cache
+docs/
+brand/
+dev/
+src-tauri/
+*.md
