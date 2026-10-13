@@ -51,7 +51,7 @@ export function DashboardPage() {
       </Button>
       <Link to="/simulator" className="glass is-interactive" style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 12px", fontSize: 13, fontWeight: 500, color: "var(--text-strong)", borderRadius: "var(--radius-sm)" }}>
         <Icon name="sliders" size={15} />
-        Simulator
+        Payoff plan
       </Link>
     </>
   );
