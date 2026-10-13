@@ -174,11 +174,20 @@ def test_non_zip_download_is_reported_with_where_it_came_from():
     assert "secret" not in msg and "KEY123" not in msg and "sign in" not in msg
 
 
-def test_bad_zip_bytes_become_a_value_error():
+def test_corrupt_zip_becomes_a_value_error():
     with pytest.raises(ValueError):
-        read_account_records(b"not a zip")
+        read_account_records(b"PK\x03\x04 corrupt")
 
 
 def test_export_sync_is_off_by_default():
     from app.config import settings
     assert settings.SURE_EXPORT_SYNC is False
+
+
+def test_bare_ndjson_upload_is_read():
+    raw = ("\n".join(json.dumps(x) for x in [CARD, LOAN, {"type": "Balance", "data": {}}])).encode()
+    assert set(read_account_records(raw)) == {"c1", "l1"}
+
+
+def test_garbage_upload_has_no_accounts():
+    assert read_account_records(b"not a zip, not json") == {}

@@ -33,7 +33,7 @@ It works on a phone as well as a laptop:
 
 | Source | What you get |
 |---|---|
-| **[Sure](https://github.com/we-promise/sure)** (recommended) | Accounts, daily balance history and transactions through Sure's API, read-only through Sure's API. Sovi stays a read-only analytics layer on top: Sure remains the place where you enter data, categorize and budget. Sure's API leaves out APR, minimum payments and limits, so you enter those in Sovi. |
+| **[Sure](https://github.com/we-promise/sure)** (recommended) | Accounts, daily balance history and transactions through Sure's API, read-only through Sure's API. Sovi stays a read-only analytics layer on top: Sure remains the place where you enter data, categorize and budget. Sure's API leaves out APR, minimum payments and limits: export your data from Sure and upload the zip in Settings (*Import account details*), or enter them in Sovi. |
 | **SimpleFIN** | Direct bank sync through a SimpleFIN setup token. |
 | **Manual** | Type in your cards and loans. No connection needed. |
 
@@ -43,6 +43,7 @@ Connect Sure in *Settings*: give it your Sure URL and a read-only API key. (An e
 
 - **Balances are signed:** assets positive, debts negative. "Amount owed" is derived in one place (`api/app/money.py`), so a source that reports debt as positive (like Sure) is normalised once, on import.
 - **Transfers are never spending.** Sure flags them; Sovi excludes them from every spending figure. Card payments are the main case.
+- **Debt terms from a Sure export.** *Settings, Import account details* reads each card's APR, minimum payment and available credit (so the limit) and each loan's rate, term, start date and original amount from a Sure export. Sure's values replace Sovi's for the fields it has; blanks and Sovi-only fields (percentage minimums, statement day) stay. Loan minimums are worked out from the original amount, rate and term. Only the account records are read; the rest of the file is ignored and nothing is stored.
 - **Categories** come from Sure. Where Sure left a transaction uncategorized, Sovi borrows the category you most often use for the same merchant, and the Spending page shows how much was filled in that way and which merchants still need a category. Sovi never writes categories or accounts back to Sure.
 
 ## Run it

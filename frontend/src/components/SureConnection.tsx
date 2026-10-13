@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
 import { Panel } from "./ui/Panel";
 import { Button } from "./ui/Button";
@@ -32,6 +32,7 @@ export function SureConnection() {
   const [apiKey, setApiKey] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     try {
@@ -82,6 +83,42 @@ export function SureConnection() {
     }
   };
 
+  interface ImportResult {
+    updated: string[];
+    created: string[];
+    needs_min_payment: string[];
+    no_details: string[];
+    accounts_in_export: number;
+  }
+
+  const importDetails = async (file: File) => {
+    setBusy(true);
+    setMsg(null);
+    try {
+      const csrf = document.cookie.split("; ").find((r) => r.startsWith("sovi_csrf="))?.split("=")[1];
+      const res = await fetch("/api/sure/details/import", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/octet-stream", ...(csrf ? { "X-CSRF-Token": csrf } : {}) },
+        body: file,
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }));
+        throw new Error(err.detail ?? "Import failed");
+      }
+      const r: ImportResult = await res.json();
+      const done = r.updated.length + r.created.length;
+      const parts = [`Read APR, minimum payment and limits for ${done} account${done === 1 ? "" : "s"}.`];
+      if (r.needs_min_payment.length) parts.push(`No minimum payment in Sure for: ${r.needs_min_payment.join(", ")}.`);
+      if (r.no_details.length) parts.push(`Nothing in the export for: ${r.no_details.join(", ")}.`);
+      setMsg(parts.join(" "));
+    } catch (err) {
+      setMsg(err instanceof Error ? err.message : "Import failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const disconnect = async () => {
     if (!confirm("Forget the Sure key? Accounts and transactions already synced stay in Sovi.")) return;
     setBusy(true);
@@ -113,7 +150,25 @@ export function SureConnection() {
           )}
           {status.details_note && <p style={{ ...muted, color: "var(--attention)", marginTop: 6 }}>{status.details_note}</p>}
           {status.last_error && <p style={{ ...muted, color: "var(--attention)", marginTop: 6 }}>{status.last_error}</p>}
-          <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+          <p style={{ ...muted, marginTop: 12 }}>
+            Sure's API leaves out APR, minimum payments and limits. In Sure, open Exports, export your data, and upload the zip
+            here (or its all.ndjson). Sovi reads only the account details from it, and Sure's values replace what is in Sovi for those fields.
+          </p>
+          <div style={{ display: "flex", gap: 10, marginTop: 12, flexWrap: "wrap" }}>
+            <Button size="sm" variant="secondary" onClick={() => fileRef.current?.click()} loading={busy}>
+              Import account details
+            </Button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".zip,.ndjson"
+              style={{ display: "none" }}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (f) importDetails(f);
+              }}
+            />
             <Button size="sm" variant="secondary" onClick={syncNow} loading={busy}>
               Sync now
             </Button>

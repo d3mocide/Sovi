@@ -20,6 +20,7 @@ from app.auth.crypto import get_master_key  # noqa: E402
 from app.config import settings  # noqa: E402
 from app.sure.client import SureAuthError, SureClient, SureError, SureExportForbidden  # noqa: E402
 from app.sure.details import debt_terms, read_account_records  # noqa: E402
+from app.sure.store import apply_terms  # noqa: E402
 from app.sure.mapping import account_row, daily_balances, transaction_row  # noqa: E402
 from app.sure.service import get_credentials  # noqa: E402
 
@@ -85,45 +86,6 @@ async def _upsert_transactions(db: asyncpg.Connection, user_id: str, account_id:
     return len(rows)
 
 
-async def _apply_terms(db: asyncpg.Connection, user_id: str, account_id: str, t: dict) -> str:
-    """Write one account's Sure-sourced terms. Returns 'updated', 'created' or 'needs_min_payment'.
-
-    Sure wins for every value it has; anything it leaves blank keeps what is already in Sovi.
-    """
-    if t["credit_limit"] is not None:
-        await db.execute("UPDATE accounts SET credit_limit=$3 WHERE id=$1 AND user_id=$2",
-                         account_id, user_id, t["credit_limit"])
-    existing = await db.fetchrow("SELECT min_payment_value FROM debt_metadata WHERE account_id=$1 AND user_id=$2",
-                                 account_id, user_id)
-    if existing is None:
-        if t["apr"] is None or t["min_payment"] is None:
-            return "needs_min_payment" if t["apr"] is not None else "updated"
-        await db.execute(
-            """
-            INSERT INTO debt_metadata (account_id, user_id, apr, min_payment_type, min_payment_value,
-                                       original_principal, term_months, opened_date, sure_synced_at)
-            VALUES ($1, $2, $3, 'fixed', $4, $5, $6, $7, now())
-            """,
-            account_id, user_id, t["apr"], t["min_payment"], t["original_principal"], t["term_months"], t["opened_date"],
-        )
-        return "created"
-    await db.execute(
-        """
-        UPDATE debt_metadata SET
-          apr = COALESCE($3, apr),
-          min_payment_type = CASE WHEN $4::numeric IS NOT NULL THEN 'fixed' ELSE min_payment_type END,
-          min_payment_value = COALESCE($4, min_payment_value),
-          original_principal = COALESCE($5, original_principal),
-          term_months = COALESCE($6, term_months),
-          opened_date = COALESCE($7, opened_date),
-          sure_synced_at = now()
-        WHERE account_id=$1 AND user_id=$2
-        """,
-        account_id, user_id, t["apr"], t["min_payment"], t["original_principal"], t["term_months"], t["opened_date"],
-    )
-    return "updated"
-
-
 async def _sync_details(db: asyncpg.Connection, client: SureClient, user_id: str,
                         owed: dict[str, tuple[str, Decimal]], force: bool) -> None:
     """Read APR, minimum payment and limits through a Sure family export. Never fails the main sync."""
@@ -155,7 +117,7 @@ async def _sync_details(db: asyncpg.Connection, client: SureClient, user_id: str
             rec = records.get(sure_id)
             terms = debt_terms(rec, balance_owed) if rec else None
             if terms:
-                counts[await _apply_terms(db, user_id, sovi_id, terms)] += 1
+                counts[await apply_terms(db, user_id, sovi_id, terms)] += 1
         if counts["needs_min_payment"]:
             note = f"{counts['needs_min_payment']} account(s) have an APR in Sure but no minimum payment; enter it in Sovi or Sure."
     except (SureExportForbidden, SureAuthError):

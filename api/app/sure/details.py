@@ -32,35 +32,44 @@ def _date(v: Any) -> date | None:
         return None
 
 
-def read_account_records(zip_bytes: bytes) -> dict[str, dict[str, Any]]:
-    """Return {sure account id: account record incl. 'accountable'} from all.ndjson.
-
-    Accounts are written first, so reading stops at the first other record type and the (much larger)
-    transaction and balance lines are never parsed.
-    """
+def _read_ndjson_lines(lines) -> dict[str, dict[str, Any]]:
     out: dict[str, dict[str, Any]] = {}
+    for raw in lines:
+        line = raw.strip()
+        if not line:
+            continue
+        if not line[:40].replace(b" ", b"").startswith(b'{"type":"Account"'):
+            break
+        data = json.loads(line).get("data") or {}
+        if data.get("id"):
+            out[str(data["id"])] = data
+    return out
+
+
+def read_account_records(data: bytes) -> dict[str, dict[str, Any]]:
+    """Return {sure account id: account record incl. 'accountable'} from a Sure family export.
+
+    Takes the export zip or its all.ndjson on its own. Accounts are written first, so reading stops at
+    the first other record type and the (much larger) transaction and balance lines are never parsed.
+    """
+    if data[:2] != b"PK":
+        try:
+            return _read_ndjson_lines(io.BytesIO(data))
+        except ValueError:
+            raise ValueError("that file is neither a Sure export zip nor an all.ndjson") from None
     try:
-        z = zipfile.ZipFile(io.BytesIO(zip_bytes))
+        z = zipfile.ZipFile(io.BytesIO(data))
     except zipfile.BadZipFile:
         raise ValueError("the Sure export was not a valid zip file") from None
     with z:
         try:
             info = z.getinfo("all.ndjson")
         except KeyError:
-            return out
+            return {}
         if info.file_size > _MAX_NDJSON_BYTES:
             raise ValueError("all.ndjson is larger than Sovi will read")
         with z.open(info) as f:
-            for raw in f:
-                line = raw.strip()
-                if not line:
-                    continue
-                if not line[:40].replace(b" ", b"").startswith(b'{"type":"Account"'):
-                    break
-                data = json.loads(line).get("data") or {}
-                if data.get("id"):
-                    out[str(data["id"])] = data
-    return out
+            return _read_ndjson_lines(f)
 
 
 def loan_payment(principal: Decimal, annual_rate_pct: Decimal, term_months: int) -> Decimal:

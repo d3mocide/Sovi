@@ -12,6 +12,7 @@ from app.database import get_db
 from app.dependencies import get_arq_redis
 from app.sure.client import SureAuthError, SureError
 from app.sure.service import connect_sure
+from app.sure.store import apply_export
 
 router = APIRouter(tags=["sure"])
 
@@ -91,3 +92,34 @@ async def disconnect(
     """Forget the key. Already-synced accounts and transactions are kept."""
     await db.execute("DELETE FROM sure_credentials WHERE user_id=$1", str(user["id"]))
     return Response(status_code=204)
+
+
+_IMPORT_MAX_BYTES = 64 * 1024 * 1024
+
+
+@router.post("/details/import")
+async def import_details(
+    request: Request,
+    db: Annotated[asyncpg.Connection, Depends(get_db)],
+    user: Annotated[dict, Depends(get_current_user)],
+) -> dict:
+    """Read APR, minimum payment and limits from a Sure export (zip or all.ndjson) the user uploaded.
+
+    Sure's API leaves these out and serves export files only behind a browser login, so the file comes
+    from the user's own download. The body is the raw file. Only the account records are read.
+    """
+    declared = request.headers.get("content-length")
+    if declared and declared.isdigit() and int(declared) > _IMPORT_MAX_BYTES:
+        raise HTTPException(status_code=413, detail="That file is too large")
+    chunks, size = [], 0
+    async for chunk in request.stream():
+        size += len(chunk)
+        if size > _IMPORT_MAX_BYTES:
+            raise HTTPException(status_code=413, detail="That file is too large")
+        chunks.append(chunk)
+    if size == 0:
+        raise HTTPException(status_code=422, detail="No file received")
+    try:
+        return await apply_export(db, str(user["id"]), b"".join(chunks))
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
