@@ -95,7 +95,7 @@ On rootless Podman the secret files must be readable by the container user (the 
 | `frontend/` | React, TypeScript, Vite, Recharts. One stylesheet of design tokens (`src/styles/tokens`), a glass-panel layout (`src/styles/layout.css`), responsive from phone to laptop. |
 | `api/` | FastAPI, asyncpg, Alembic migrations. Argon2id passwords, optional TOTP, CSRF double-submit cookie, per-user data keys wrapped by the master key (AES-GCM). |
 | `worker/` | `arq` jobs: scheduled syncs for Sure and SimpleFIN. |
-| `shared/payoff/` | The payoff engine in TypeScript (used by the browser for instant what-ifs), mirrored by `api/app/payoff/` for server-side numbers. |
+| `shared/payoff/` | The payoff engine in TypeScript (used by the browser for instant what-ifs), mirrored by `api/app/payoff/` for server-side numbers (the Python copy does not have windfalls or promotional rates yet). |
 | Postgres 16, Redis 7 | Data and job queue. |
 
 Dependencies are pinned to exact versions and held for 72 hours before adoption; see [DEPENDENCIES.md](DEPENDENCIES.md).
