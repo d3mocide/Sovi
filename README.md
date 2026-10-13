@@ -51,14 +51,14 @@ You need Docker (or rootless Podman) with Compose.
 
 ### From a release (no build)
 
-Each [release](https://github.com/d3mocide/Sovi/releases) publishes ready-made images (`ghcr.io/d3mocide/sovi-api`, `sovi-worker`, `sovi-frontend`). Download `docker-compose.release.yml` and `.env.example` from the release page, then:
+Each [release](https://github.com/d3mocide/Sovi/releases) publishes ready-made images (`ghcr.io/d3mocide/sovi-api`, `sovi-worker`, `sovi-frontend`). Download `docker-compose.release.yml` and `env.example` from the release page, then:
 
 ```bash
 mkdir -p secrets
 openssl rand -hex 32 > secrets/master_key.txt     # encrypts stored credentials; back it up
 openssl rand -hex 24 > secrets/db_password.txt
 chmod 700 secrets && chmod 644 secrets/*.txt      # the app runs as a non-root user inside the container
-cp .env.example .env                              # set SECRET_KEY (openssl rand -hex 32) and SOVI_VERSION (for example 0.1.0)
+mv env.example .env                               # set SECRET_KEY (openssl rand -hex 32) and SOVI_VERSION (for example 0.1.0)
 docker compose -f docker-compose.release.yml up -d
 ```
 

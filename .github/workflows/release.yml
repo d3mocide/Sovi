@@ -74,6 +74,8 @@ jobs:
         run: |
           flags=""
           case "$TAG" in *-*) flags="--prerelease" ;; esac
+          # GitHub renames dot-files on upload (.env.example becomes default.env.example), so publish a plain-named copy.
+          cp .env.example env.example
           gh release create "$TAG" $flags --verify-tag --generate-notes \
             --notes-file docs/release-notes-footer.md \
-            docker-compose.release.yml .env.example
+            docker-compose.release.yml env.example
