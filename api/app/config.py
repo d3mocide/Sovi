@@ -42,22 +42,16 @@ class Settings(BaseSettings):
     @classmethod
     def load_secrets_from_files(cls, data: dict) -> dict:
         import os
-        # Load DB_PASSWORD from DB_PASSWORD_FILE if specified
-        db_pass_file = os.environ.get("DB_PASSWORD_FILE") or data.get("DB_PASSWORD_FILE")
-        if db_pass_file and os.path.exists(db_pass_file):
-            try:
-                with open(db_pass_file, "r") as f:
-                    data["DB_PASSWORD"] = f.read().strip()
-            except Exception:
-                pass
-        # Load MASTER_KEY from MASTER_KEY_FILE if specified
-        master_key_file = os.environ.get("MASTER_KEY_FILE") or data.get("MASTER_KEY_FILE")
-        if master_key_file and os.path.exists(master_key_file):
-            try:
-                with open(master_key_file, "r") as f:
-                    data["MASTER_KEY"] = f.read().strip()
-            except Exception:
-                pass
+        # Secrets from files (Docker/Podman secrets). A configured file that cannot be read is an
+        # error: falling back to the "changeme" defaults would silently use a known password/key.
+        for var in ("DB_PASSWORD", "MASTER_KEY"):
+            path = os.environ.get(f"{var}_FILE") or data.get(f"{var}_FILE")
+            if path:
+                try:
+                    with open(path, "r") as f:
+                        data[var] = f.read().strip()
+                except OSError as exc:
+                    raise RuntimeError(f"cannot read {var}_FILE ({path}): {exc.strerror}") from None
         return data
 
     @model_validator(mode="after")
