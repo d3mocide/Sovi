@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "changeme"
     MASTER_KEY: str = "changeme"
 
+    # The first account can always be created; after that sign-ups stay closed unless this is true
+    ALLOW_REGISTRATION: bool = False
+
     # CORS — comma-separated list in env, e.g. "http://localhost:3000,https://app.example.com"
     # Use Union[str, List[str]] so pydantic-settings passes raw string to field_validator
     CORS_ORIGINS: Union[str, List[str]] = ["http://localhost:3000"]

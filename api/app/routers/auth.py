@@ -65,6 +65,10 @@ async def register(
             status_code=422, detail="Password must be at least 12 characters"
         )
 
+    if not settings.ALLOW_REGISTRATION:
+        if await db.fetchval("SELECT COUNT(*) FROM users") > 0:
+            raise HTTPException(status_code=403, detail="Registration is closed")
+
     # Check for existing email (CITEXT handles case-insensitivity)
     try:
         existing = await db.fetchval(
