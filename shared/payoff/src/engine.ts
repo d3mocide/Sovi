@@ -31,16 +31,22 @@ const ACTIVE_THRESHOLD = 0.001;
  * Sort active debt IDs by strategy.
  * `balances` is the current balance map (after minimums are applied, for snowball).
  */
+/** The APR in force for a debt in a given month (promotional rates end after `promo.months`). */
+function effectiveApr(d: Debt, month: number): number {
+  return d.promo && month <= d.promo.months ? d.promo.apr : d.apr;
+}
+
 function sortByStrategy(
   activeIds: string[],
   debtMap: Map<string, Debt>,
   balances: Map<string, number>,
   strategy: Strategy,
-  customOrder?: string[]
+  customOrder?: string[],
+  month = 1
 ): string[] {
   const sorted = [...activeIds];
   if (strategy === "avalanche") {
-    sorted.sort((a, b) => (debtMap.get(b)!.apr) - (debtMap.get(a)!.apr));
+    sorted.sort((a, b) => effectiveApr(debtMap.get(b)!, month) - effectiveApr(debtMap.get(a)!, month));
   } else if (strategy === "snowball") {
     sorted.sort((a, b) => (balances.get(a) ?? 0) - (balances.get(b) ?? 0));
   } else if (strategy === "custom" && customOrder) {
@@ -58,7 +64,7 @@ function sortByStrategy(
  * Simulate debt payoff.
  */
 export function simulate(input: SimulateInput): SimulateResult {
-  const { debts, extraMonthly, strategy, customOrder } = input;
+  const { debts, extraMonthly, strategy, customOrder, lumpSums = [] } = input;
   const horizonMonths = input.horizonMonths ?? 600;
 
   // Build working state
@@ -77,7 +83,7 @@ export function simulate(input: SimulateInput): SimulateResult {
   for (const debt of debts) {
     const bal = balances.get(debt.id)!;
     if (bal > ACTIVE_THRESHOLD) {
-      const monthlyInterest = bal * (debt.apr / 100 / 12);
+      const monthlyInterest = bal * (effectiveApr(debt, 1) / 100 / 12);
       const minPay = resolveMinPayment(debt, bal + monthlyInterest, monthlyInterest);
       // Only a problem if there is no extra money to rescue it.
       if (extraMonthly === 0 && minPay <= monthlyInterest) {
@@ -111,7 +117,7 @@ export function simulate(input: SimulateInput): SimulateResult {
     // Step 1: Accrue interest on all active debts
     for (const id of activeIds) {
       const bal = balances.get(id)!;
-      const interest = bal * (debtMap.get(id)!.apr / 100 / 12);
+      const interest = bal * (effectiveApr(debtMap.get(id)!, month) / 100 / 12);
       const newBal = bal + interest;
       balances.set(id, newBal);
       interestAccrued[id] = interest;
@@ -125,7 +131,7 @@ export function simulate(input: SimulateInput): SimulateResult {
       .filter(id => (balances.get(id) ?? 0) > ACTIVE_THRESHOLD);
 
     // Step 2: Compute minimums and pay them; freed minimums roll into pool
-    let pool = extraMonthly;
+    let pool = extraMonthly + lumpSums.filter((l) => l.month === month).reduce((a, l) => a + l.amount, 0);
     for (const id of activeAfterInterest) {
       const bal = balances.get(id)!;
       const minDue = resolveMinPayment(debtMap.get(id)!, bal, interestAccrued[id] ?? 0);
@@ -142,7 +148,7 @@ export function simulate(input: SimulateInput): SimulateResult {
       .map(d => d.id)
       .filter(id => (balances.get(id) ?? 0) > ACTIVE_THRESHOLD);
 
-    const sortedIds = sortByStrategy(activeForPool, debtMap, balances, strategy, customOrder);
+    const sortedIds = sortByStrategy(activeForPool, debtMap, balances, strategy, customOrder, month);
 
     for (const id of sortedIds) {
       if (pool <= 0) break;
