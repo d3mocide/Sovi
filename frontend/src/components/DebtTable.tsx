@@ -6,9 +6,14 @@ import type { DebtProgress } from "../hooks/useGamification";
 function minPayment(d: DebtProgress): number | null {
   if (d.min_payment_value == null) return null;
   const v = Number(d.min_payment_value);
-  if (d.min_payment_type === "fixed") return Math.min(v, d.current_balance);
-  const pct = (d.current_balance * v) / 100;
-  return Math.min(Math.max(pct, Number(d.min_payment_floor ?? 0)), d.current_balance);
+  const bal = Number(d.current_balance);
+  if (d.min_payment_type === "fixed") return Math.min(v, bal);
+  if (d.min_payment_type === "interest_plus_percent") {
+    const due = Number(d.monthly_interest ?? 0) + (bal * v) / 100;
+    return Math.min(Math.max(due, Number(d.min_payment_floor ?? 0)), bal);
+  }
+  const pct = (bal * v) / 100;
+  return Math.min(Math.max(pct, Number(d.min_payment_floor ?? 0)), bal);
 }
 
 function utilColor(pct: number): string {
@@ -48,7 +53,7 @@ export function DebtTable({ debts }: { debts: DebtProgress[] }) {
               style={{ display: "grid", gridTemplateColumns: COLS, gap: 16, alignItems: "center", padding: "14px 4px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}
             >
               <span style={{ fontWeight: 500, color: "var(--text-strong)", fontSize: 14 }}>{d.name}</span>
-              <Numeral style={{ textAlign: "right", fontWeight: 600, fontSize: 14 }}>{money(d.current_balance, 2)}</Numeral>
+              <Numeral style={{ textAlign: "right", fontWeight: 600, fontSize: 14 }}>{money(Number(d.current_balance), 2)}</Numeral>
               <span>
                 {util != null && d.credit_limit != null ? (
                   <span style={{ display: "block" }}>

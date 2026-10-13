@@ -2,8 +2,8 @@ export interface Debt {
   id: string;
   balance: number;        // current balance (positive = owed)
   apr: number;            // annual %, e.g. 24.99
-  minPaymentType: "fixed" | "percent";
-  minPaymentValue: number; // $ if fixed, % (e.g. 1.0) if percent
+  minPaymentType: "fixed" | "percent" | "interest_plus_percent";
+  minPaymentValue: number; // $ if fixed, % of balance (e.g. 1.0) if percent or interest_plus_percent
   minPaymentFloor?: number; // floor for percent-based (e.g. $25)
 }
 

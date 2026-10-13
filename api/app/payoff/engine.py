@@ -9,9 +9,13 @@ EPSILON = Decimal("0.001")
 CENTS = Decimal("0.01")
 
 
-def resolve_min_payment(debt: Debt, balance: Decimal) -> Decimal:
+def resolve_min_payment(debt: Debt, balance: Decimal, interest: Decimal = Decimal("0")) -> Decimal:
     if debt.min_payment_type == "fixed":
         return min(debt.min_payment_value, balance)
+    if debt.min_payment_type == "interest_plus_percent":
+        # The common US card rule: this month's interest plus a percentage of the balance before it.
+        due = interest + (balance - interest) * (debt.min_payment_value / Decimal("100"))
+        return min(max(due, debt.min_payment_floor or Decimal("0")), balance)
     pct = balance * (debt.min_payment_value / Decimal("100"))
     floor = debt.min_payment_floor or Decimal("0")
     return min(max(pct, floor), balance)
@@ -40,7 +44,7 @@ def simulate(
     for d in working:
         monthly_rate = d.apr / Decimal("100") / Decimal("12")
         monthly_interest = d.balance * monthly_rate
-        min_pmt = resolve_min_payment(d, d.balance)
+        min_pmt = resolve_min_payment(d, d.balance + monthly_interest, monthly_interest)
         if extra_monthly == 0 and min_pmt <= monthly_interest:
             warnings.append(
                 f"Debt '{d.id}': minimum payment (${min_pmt:.2f}) does not exceed monthly interest "
@@ -68,7 +72,7 @@ def simulate(
             if balances[d.id] <= EPSILON:
                 month_payments[d.id] = month_payments.get(d.id, Decimal("0"))
                 continue
-            min_due = resolve_min_payment(d, balances[d.id])
+            min_due = resolve_min_payment(d, balances[d.id], month_interest.get(d.id, Decimal("0")))
             pay = min(min_due, balances[d.id])
             balances[d.id] = max(Decimal("0"), balances[d.id] - pay)
             pool += (min_due - pay)

@@ -36,6 +36,9 @@ def _compute_fields(
     # min_payment_computed
     if min_payment_type == "fixed":
         min_payment_computed = min_payment_value
+    elif min_payment_type == "interest_plus_percent":
+        floor = min_payment_floor if min_payment_floor is not None else Decimal("0")
+        min_payment_computed = max(floor, monthly_interest + balance * (min_payment_value / Decimal("100")))
     else:
         # percent: max(floor or 0, balance * min_payment_value / 100)
         percent_amount = balance * (min_payment_value / Decimal("100"))

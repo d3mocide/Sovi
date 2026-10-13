@@ -7,7 +7,7 @@ from arq.connections import RedisSettings
 
 from worker.db import close_pool, get_pool
 from worker.settings import settings
-from worker.tasks import sync_all_users_job, sync_user_job
+from worker.tasks import sync_all_users_job, sync_all_sure_job, sync_user_job, sure_sync_job
 
 logging.basicConfig(level=settings.LOG_LEVEL.upper())
 
@@ -21,9 +21,10 @@ async def on_shutdown(ctx: dict) -> None:
 
 
 class WorkerSettings:
-    functions = [sync_user_job, sync_all_users_job]
+    functions = [sync_user_job, sync_all_users_job, sure_sync_job, sync_all_sure_job]
     cron_jobs = [
         cron(sync_all_users_job, hour={6, 12, 18}, minute=0),  # 3x/day
+        cron(sync_all_sure_job, hour={5, 11, 17, 23}, minute=30),  # 4x/day
     ]
     redis_settings = RedisSettings.from_dsn(settings.REDIS_URL)
     on_startup = on_startup

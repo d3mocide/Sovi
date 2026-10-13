@@ -10,7 +10,7 @@ export interface DebtProgress {
   progress_pct: number;
   payoff_month: number | null;
   apr: number | null;
-  min_payment_type: "fixed" | "percent" | null;
+  min_payment_type: "fixed" | "percent" | "interest_plus_percent" | null;
   min_payment_value: number | null;
   min_payment_floor: number | null;
   credit_limit: number | null;

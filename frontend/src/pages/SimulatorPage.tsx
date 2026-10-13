@@ -38,7 +38,7 @@ export function SimulatorPage() {
         id: d.account_id,
         balance: Number(d.current_balance),
         apr: Number(d.apr),
-        minPaymentType: (d.min_payment_type ?? "percent") as "fixed" | "percent",
+        minPaymentType: (d.min_payment_type ?? "percent") as "fixed" | "percent" | "interest_plus_percent",
         minPaymentValue: Number(d.min_payment_value ?? 1),
         minPaymentFloor: d.min_payment_floor != null ? Number(d.min_payment_floor) : 25,
       }));
@@ -213,8 +213,8 @@ export function SimulatorPage() {
                         formatter={(v: number, n: string) => [formatCurrency(v), n === "plan" ? "With plan" : "Minimums only"]}
                         labelFormatter={(m) => `Month ${m}`}
                       />
-                      <Area type="monotone" dataKey="minimums" stroke="var(--text-faint)" strokeDasharray="4 4" strokeWidth={1.5} fill="none" dot={false} />
-                      <Area type="monotone" dataKey="plan" stroke="var(--positive)" strokeWidth={2} fill="url(#planGrad)" dot={false} />
+                      <Area type="monotone" dataKey="minimums" stroke="var(--text-faint)" strokeDasharray="4 4" strokeWidth={1.5} fill="none" dot={false} isAnimationActive={false} />
+                      <Area type="monotone" dataKey="plan" stroke="var(--positive)" strokeWidth={2} fill="url(#planGrad)" dot={false} isAnimationActive={false} />
                     </AreaChart>
                   </ResponsiveContainer>
                 </Panel>

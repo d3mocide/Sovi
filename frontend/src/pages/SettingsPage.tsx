@@ -9,6 +9,7 @@ import { Badge } from "../components/ui/Badge";
 import { Eyebrow, Numeral } from "../components/ui/Stat";
 import { AppShell } from "../components/ui/AppChrome";
 import { Icon } from "../components/ui/Icon";
+import { SureConnection } from "../components/SureConnection";
 import { theme } from "../theme";
 
 interface SfinStatus {
@@ -95,6 +96,7 @@ export function SettingsPage() {
   return (
     <AppShell title="Settings" subtitle="Account, security and data connections" narrow>
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+        <SureConnection />
         {/* Account */}
         <Card>
           <Eyebrow style={{ marginBottom: "14px" }}>Account</Eyebrow>

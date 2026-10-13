@@ -9,9 +9,14 @@ function round2(v: number): number {
  * Resolve the minimum payment due for a debt given its current balance.
  * Never returns more than the balance (can't overpay).
  */
-export function resolveMinPayment(debt: Debt, balance: number): number {
+export function resolveMinPayment(debt: Debt, balance: number, interest = 0): number {
   if (debt.minPaymentType === "fixed") {
     return Math.min(debt.minPaymentValue, balance);
+  }
+  if (debt.minPaymentType === "interest_plus_percent") {
+    // The common US card rule: this month's interest plus a percentage of the balance before it.
+    const due = interest + (balance - interest) * (debt.minPaymentValue / 100);
+    return Math.min(Math.max(due, debt.minPaymentFloor ?? 0), balance);
   }
   // percent-based
   const pct = balance * (debt.minPaymentValue / 100);
@@ -73,14 +78,14 @@ export function simulate(input: SimulateInput): SimulateResult {
     const bal = balances.get(debt.id)!;
     if (bal > ACTIVE_THRESHOLD) {
       const monthlyInterest = bal * (debt.apr / 100 / 12);
-      const minPay = resolveMinPayment(debt, bal);
-      if (minPay <= monthlyInterest) {
+      const minPay = resolveMinPayment(debt, bal + monthlyInterest, monthlyInterest);
+      // Only a problem if there is no extra money to rescue it.
+      if (extraMonthly === 0 && minPay <= monthlyInterest) {
         warnings.push(
           `Debt "${debt.id}" has negative amortization: minimum payment ($${minPay.toFixed(2)}) ` +
           `does not exceed monthly interest ($${monthlyInterest.toFixed(2)}). ` +
           `This debt will never pay off without extra payments.`
         );
-        hitHorizon = true;
       }
     }
   }
@@ -123,7 +128,7 @@ export function simulate(input: SimulateInput): SimulateResult {
     let pool = extraMonthly;
     for (const id of activeAfterInterest) {
       const bal = balances.get(id)!;
-      const minDue = resolveMinPayment(debtMap.get(id)!, bal);
+      const minDue = resolveMinPayment(debtMap.get(id)!, bal, interestAccrued[id] ?? 0);
       const pay = Math.min(minDue, bal);
       const newBal = Math.max(0, bal - pay);
       balances.set(id, newBal);

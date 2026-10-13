@@ -15,7 +15,7 @@ class DebtInput(BaseModel):
     id: str
     balance: Decimal
     apr: Decimal
-    min_payment_type: Literal["fixed", "percent"]
+    min_payment_type: Literal["fixed", "percent", "interest_plus_percent"]
     min_payment_value: Decimal
     min_payment_floor: Optional[Decimal] = None
 

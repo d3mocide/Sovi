@@ -8,7 +8,7 @@ from pydantic import BaseModel, field_validator
 
 class DebtMetadataRequest(BaseModel):
     apr: Decimal                              # e.g. 24.990
-    min_payment_type: Literal["fixed", "percent"]
+    min_payment_type: Literal["fixed", "percent", "interest_plus_percent"]
     min_payment_value: Decimal               # $ if fixed, % if percent (e.g. 1.0 = 1%)
     min_payment_floor: Optional[Decimal] = None
     statement_due_day: Optional[int] = None  # 1-31

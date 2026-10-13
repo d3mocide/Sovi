@@ -9,7 +9,7 @@ class Debt:
     id: str
     balance: Decimal
     apr: Decimal                    # e.g. Decimal("22.99")
-    min_payment_type: Literal["fixed", "percent"]
+    min_payment_type: Literal["fixed", "percent", "interest_plus_percent"]
     min_payment_value: Decimal
     min_payment_floor: Optional[Decimal] = None
 

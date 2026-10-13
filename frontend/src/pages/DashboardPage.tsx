@@ -22,7 +22,12 @@ export function DashboardPage() {
     setRefreshing(true);
     setRefreshMsg(null);
     try {
-      await api.post("/simplefin/refresh");
+      // Sure is the primary source; fall back to SimpleFIN if Sure is not connected.
+      try {
+        await api.post("/sure/refresh");
+      } catch {
+        await api.post("/simplefin/refresh");
+      }
       setRefreshMsg("Sync queued");
       setTimeout(() => refresh(), 3000);
     } catch (err) {
@@ -56,7 +61,7 @@ export function DashboardPage() {
   const monthlyInterest = debts.reduce((a, d) => a + Number(d.monthly_interest ?? 0), 0);
   const cards = debts.filter((d) => d.credit_limit != null && d.utilization_pct != null);
   const limitTotal = cards.reduce((a, d) => a + Number(d.credit_limit), 0);
-  const cardOwed = cards.reduce((a, d) => a + d.current_balance, 0);
+  const cardOwed = cards.reduce((a, d) => a + Number(d.current_balance), 0);
   const utilPct = limitTotal > 0 ? (cardOwed / limitTotal) * 100 : null;
   const months = data?.days_until_debt_free != null ? Math.round(data.days_until_debt_free / 30.4) : null;
   const years = months != null ? months / 12 : null;
@@ -94,6 +99,13 @@ export function DashboardPage() {
                 </p>
                 <p style={{ marginTop: 6, color: "var(--text-muted)", fontSize: 12.5 }}>
                   {money(owed)} remaining · avalanche plan
+                </p>
+              </>
+            ) : debts.length > 0 ? (
+              <>
+                <p style={{ color: "var(--text-strong)", fontSize: 16, fontWeight: 500 }}>Not at minimum payments</p>
+                <p style={{ color: "var(--text-muted)", fontSize: 13.5, marginTop: 8, lineHeight: 1.5 }}>
+                  At the minimums you set, at least one debt never pays off within 50 years. Try an extra monthly payment in the Simulator.
                 </p>
               </>
             ) : (

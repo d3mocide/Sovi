@@ -39,3 +39,25 @@ async def sync_all_users_job(ctx: dict) -> dict:
 
     logger.info("sync_all_users_job: enqueued %d sync jobs", enqueued)
     return {"enqueued": enqueued}
+
+
+async def sure_sync_job(ctx: dict, user_id: str) -> dict:
+    """arq job: sync one user's data from Sure."""
+    from worker.sure_sync import sync_user as sure_sync_user
+    pool = ctx.get("pool") or await get_pool()
+    async with pool.acquire() as db:
+        return await sure_sync_user(db, user_id)
+
+
+async def sync_all_sure_job(ctx: dict) -> dict:
+    """arq job: enqueue a Sure sync for every connected user whose key is still valid."""
+    pool = ctx.get("pool") or await get_pool()
+    async with pool.acquire() as db:
+        rows = await db.fetch("SELECT user_id FROM sure_credentials WHERE status='active'")
+    redis = ctx.get("redis")
+    if redis is None:
+        logger.error("sync_all_sure_job: no arq redis in context")
+        return {"enqueued": 0}
+    for r in rows:
+        await redis.enqueue_job("sure_sync_job", str(r["user_id"]))
+    return {"enqueued": len(rows)}

@@ -59,7 +59,7 @@ export function AccountsPage() {
   const [debtModalAccount, setDebtModalAccount] = useState<Account | null>(null);
   const [metadataLoading, setMetadataLoading] = useState(false);
   const [apr, setApr] = useState("");
-  const [minPaymentType, setMinPaymentType] = useState<"fixed" | "percent">("percent");
+  const [minPaymentType, setMinPaymentType] = useState<"fixed" | "percent" | "interest_plus_percent">("interest_plus_percent");
   const [minPaymentValue, setMinPaymentValue] = useState("");
   const [minPaymentFloor, setMinPaymentFloor] = useState("");
   const [statementDueDay, setStatementDueDay] = useState("");
@@ -87,7 +87,7 @@ export function AccountsPage() {
     try {
       const data = await api.get<{
         apr: number;
-        min_payment_type: "fixed" | "percent";
+        min_payment_type: "fixed" | "percent" | "interest_plus_percent";
         min_payment_value: number;
         min_payment_floor: number | null;
         statement_due_day: number | null;
@@ -105,7 +105,7 @@ export function AccountsPage() {
       setOpenedDate(data.opened_date || "");
     } catch (err) {
       setApr("");
-      setMinPaymentType("percent");
+      setMinPaymentType("interest_plus_percent");
       setMinPaymentValue("");
       setMinPaymentFloor("");
       setStatementDueDay("");
@@ -379,7 +379,7 @@ export function AccountsPage() {
                     </label>
                     <select
                       value={minPaymentType}
-                      onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setMinPaymentType(e.target.value as "fixed" | "percent")}
+                      onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setMinPaymentType(e.target.value as "fixed" | "percent" | "interest_plus_percent")}
                       style={{
                         background: theme.colors.inputDeep,
                         border: `1px solid ${theme.colors.border}`,
@@ -390,7 +390,8 @@ export function AccountsPage() {
                         height: "40px",
                       }}
                     >
-                      <option value="percent">Percentage (%)</option>
+                      <option value="interest_plus_percent">Interest + % of balance</option>
+                      <option value="percent">Percentage of balance (%)</option>
                       <option value="fixed">Fixed Amount ($)</option>
                     </select>
                   </div>
@@ -398,11 +399,11 @@ export function AccountsPage() {
 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                   <Input
-                    label={minPaymentType === "percent" ? "Min Payment (%)" : "Min Payment ($)"}
+                    label={minPaymentType === "fixed" ? "Min Payment ($)" : minPaymentType === "interest_plus_percent" ? "Plus this % of balance" : "Min Payment (%)"}
                     type="number"
                     step="0.01"
                     min="0.01"
-                    placeholder={minPaymentType === "percent" ? "2.0" : "25.00"}
+                    placeholder={minPaymentType === "fixed" ? "25.00" : minPaymentType === "interest_plus_percent" ? "1.0" : "2.0"}
                     value={minPaymentValue}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMinPaymentValue(e.target.value)}
                     required

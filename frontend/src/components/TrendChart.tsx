@@ -35,6 +35,16 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+/** 0..max in 4 "nice" steps (1, 2, 2.5, 5 x 10^n), so ticks read $0 $5k $10k $15k $20k. */
+function niceTicks(max: number): number[] {
+  if (max <= 0) return [0];
+  const raw = max / 4;
+  const pow = Math.pow(10, Math.floor(Math.log10(raw)));
+  const step = [1, 2, 2.5, 5, 10].map((m) => m * pow).find((s) => s >= raw) ?? raw;
+  const top = Math.ceil(max / step) * step;
+  return Array.from({ length: Math.round(top / step) + 1 }, (_, i) => i * step);
+}
+
 export function TrendChart({ trend, className }: TrendChartProps) {
   if (trend.length < 2) {
     return (
@@ -77,7 +87,8 @@ export function TrendChart({ trend, className }: TrendChartProps) {
             axisLine={false}
             tickLine={false}
             tickFormatter={formatAxisMoney}
-            domain={[0, "auto"]}
+            domain={[0, niceTicks(Math.max(...data.map((d) => d.balance)))[niceTicks(Math.max(...data.map((d) => d.balance))).length - 1]]}
+            ticks={niceTicks(Math.max(...data.map((d) => d.balance)))}
             width={52}
           />
           <Tooltip
@@ -100,6 +111,7 @@ export function TrendChart({ trend, className }: TrendChartProps) {
             strokeWidth={2}
             fill="url(#debtGrad)"
             dot={false}
+            isAnimationActive={false}
           />
         </AreaChart>
       </ResponsiveContainer>
