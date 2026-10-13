@@ -133,6 +133,7 @@ async def _sync_details(db: asyncpg.Connection, client: SureClient, user_id: str
     if not owed:
         return
     note = None
+    failed = False
     try:
         export_id = await client.create_export()
         for _ in range(_EXPORT_POLL_TRIES):
@@ -154,12 +155,16 @@ async def _sync_details(db: asyncpg.Connection, client: SureClient, user_id: str
         if counts["needs_min_payment"]:
             note = f"{counts['needs_min_payment']} account(s) have an APR in Sure but no minimum payment; enter it in Sovi or Sure."
     except (SureExportForbidden, SureAuthError):
+        failed = True
         note = "APR and limits are not syncing: the Sure key needs read_write scope and an admin Sure user."
     except (SureError, ValueError, KeyError) as exc:
+        failed = True
         note = f"Could not read account details from Sure: {str(exc)[:150]}"
         logger.warning("sure details sync user_id=%s: %s", user_id, exc)
-    await db.execute("UPDATE sure_credentials SET details_synced_at=now(), details_note=$2 WHERE user_id=$1",
-                     user_id, note)
+    # A failed attempt is retried in about an hour, not after the full interval.
+    stamp = now - (_DETAILS_EVERY - timedelta(hours=1)) if failed else now
+    await db.execute("UPDATE sure_credentials SET details_synced_at=$3, details_note=$2 WHERE user_id=$1",
+                     user_id, note, stamp)
 
 
 async def sync_user(db: asyncpg.Connection, user_id: str, force: bool = False) -> dict:

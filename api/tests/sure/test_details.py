@@ -121,10 +121,34 @@ def test_create_export_forbidden_has_its_own_error_and_no_key():
 
 def test_create_export_returns_id():
     async def go():
-        c = SureClient("http://sure.test", "K", transport=httpx.MockTransport(lambda r: httpx.Response(202, json={"id": "e9"})))
+        c = SureClient("http://sure.test", "K", transport=httpx.MockTransport(lambda r: httpx.Response(202, json={"data": {"id": "e9", "status": "pending"}})))
         try:
             return await c.create_export()
         finally:
             await c.aclose()
 
     assert run(go()) == "e9"
+
+
+def test_export_status_is_unwrapped_from_data():
+    async def go():
+        c = SureClient("http://sure.test", "K", transport=httpx.MockTransport(
+            lambda r: httpx.Response(200, json={"data": {"id": "e9", "status": "completed", "downloadable": True}})))
+        try:
+            return await c.export_status("e9")
+        finally:
+            await c.aclose()
+
+    assert run(go())["downloadable"] is True
+
+
+def test_create_export_without_id_is_a_clear_error():
+    async def go():
+        c = SureClient("http://sure.test", "K", transport=httpx.MockTransport(lambda r: httpx.Response(202, json={"data": {}})))
+        try:
+            await c.create_export()
+        finally:
+            await c.aclose()
+
+    with pytest.raises(SureError):
+        run(go())

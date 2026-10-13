@@ -18,6 +18,13 @@ class SureExportForbidden(SureError):
     """The key cannot create exports (read-only scope, or the Sure user is not an admin)."""
 
 
+def _unwrap(body: Any) -> dict:
+    """Sure's export endpoints answer {"data": {...}}; accept a bare object too."""
+    if isinstance(body, dict) and isinstance(body.get("data"), dict):
+        return body["data"]
+    return body if isinstance(body, dict) else {}
+
+
 EXPORT_MAX_BYTES = 200 * 1024 * 1024
 
 
@@ -100,10 +107,13 @@ class SureClient:
             raise SureExportForbidden("the key needs write scope and an admin user to ask Sure for an export")
         if resp.status_code >= 400:
             raise SureError(f"Sure returned HTTP {resp.status_code} for the export request")
-        return str(resp.json()["id"])
+        record = _unwrap(resp.json())
+        if "id" not in record:
+            raise SureError("Sure's export reply had no id")
+        return str(record["id"])
 
     async def export_status(self, export_id: str) -> dict:
-        return await self._get(f"/api/v1/family_exports/{export_id}")
+        return _unwrap(await self._get(f"/api/v1/family_exports/{export_id}"))
 
     async def download_export(self, export_id: str, *, max_bytes: int = EXPORT_MAX_BYTES) -> bytes:
         """Fetch the export zip. Sure answers with a redirect to a signed file URL; follow it by hand

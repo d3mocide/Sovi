@@ -192,7 +192,7 @@ class H(BaseHTTPRequestHandler):
         if self.headers.get("X-Api-Key") != KEY:
             return self.send(401, {"error": "unauthorized"})
         if urlparse(self.path).path == "/api/v1/family_exports":
-            return self.send(202, {"id": EXPORT_ID, "status": "pending", "downloadable": False})
+            return self.send(202, {"data": {"id": EXPORT_ID, "status": "pending", "downloadable": False}})
         self.send(404, {"error": "not_found"})
 
     def do_GET(self):
@@ -204,7 +204,7 @@ class H(BaseHTTPRequestHandler):
         if self.headers.get("X-Api-Key") != KEY:
             return self.send(401, {"error": "unauthorized"})
         if u.path == f"/api/v1/family_exports/{EXPORT_ID}":
-            return self.send(200, {"id": EXPORT_ID, "status": "completed", "downloadable": True})
+            return self.send(200, {"data": {"id": EXPORT_ID, "status": "completed", "downloadable": True}})
         if u.path == f"/api/v1/family_exports/{EXPORT_ID}/download":
             self.send_response(302); self.send_header("Location", "/files/export.zip")
             self.send_header("Content-Length", "0"); self.end_headers(); return
