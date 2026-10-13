@@ -9,7 +9,7 @@ import { Numeral } from "../components/ui/Stat";
 import { Button } from "../components/ui/Button";
 import { Badge } from "../components/ui/Badge";
 import { money, monthsToText } from "../lib/format";
-import { METHODS, orderFor, run, toPlanDebts, type MethodId } from "../lib/methods";
+import { METHODS, applyTransfer, orderFor, run, toPlanDebts, type MethodId } from "../lib/methods";
 
 const axis = { fill: "var(--text-muted)", fontSize: 11 };
 const compact = (v: number) => (Math.abs(v) >= 1000 ? `$${(v / 1000).toFixed(Math.abs(v) >= 10000 ? 0 : 1)}k` : `$${Math.round(v)}`);
@@ -29,6 +29,17 @@ export function SimulatorPage() {
   const [custom, setCustom] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
+  // What-if levers
+  const [windOn, setWindOn] = useState(false);
+  const [windAmt, setWindAmt] = useState(1000);
+  const [windMonth, setWindMonth] = useState(1);
+  const [btOn, setBtOn] = useState(false);
+  const [btFrom, setBtFrom] = useState("");
+  const [btAmt, setBtAmt] = useState(2000);
+  const [btFee, setBtFee] = useState(3);
+  const [btPromoApr, setBtPromoApr] = useState(0);
+  const [btPromoMonths, setBtPromoMonths] = useState(15);
+  const [btAfter, setBtAfter] = useState(22);
 
   const debts = useMemo(() => toPlanDebts(gam?.debt_progress ?? []), [gam]);
   const byId = useMemo(() => Object.fromEntries(debts.map((d) => [d.id, d])), [debts]);
@@ -38,6 +49,16 @@ export function SimulatorPage() {
     if (debts.length && custom.length === 0) setCustom(orderFor("avalanche", debts, []));
   }, [debts, custom.length]);
 
+  const cardDebts = debts.filter((d) => d.type === "credit_card");
+  useEffect(() => {
+    if (!btFrom && cardDebts.length) {
+      const worst = [...cardDebts].sort((a, b) => b.apr - a.apr)[0];
+      setBtFrom(worst.id);
+      setBtAmt(Math.round(Math.min(worst.balance, 3000) / 100) * 100);
+      setBtAfter(Math.round(worst.apr));
+    }
+  }, [cardDebts, btFrom]);
+
   const runs = useMemo(
     () => (debts.length ? METHODS.map((m) => run(m.id, debts, extra, custom)) : []),
     [debts, extra, custom]
@@ -45,6 +66,14 @@ export function SimulatorPage() {
   const baseline = useMemo(() => (debts.length ? simulate({ debts: debts.map((d) => d.debt), extraMonthly: 0, strategy: "avalanche" }) : null), [debts]);
   const current = runs.find((r) => r.method === method);
   const meta = METHODS.find((m) => m.id === method)!;
+
+  const whatIfActive = windOn || btOn;
+  const scenario = useMemo(() => {
+    if (!debts.length || !whatIfActive) return null;
+    const tr = btOn ? applyTransfer(debts, { fromId: btFrom, amount: btAmt, feePct: btFee, promoApr: btPromoApr, promoMonths: btPromoMonths, afterApr: btAfter }) : { debts, fee: 0 };
+    const lump = windOn ? [{ month: windMonth, amount: windAmt }] : [];
+    return { run: run(method, tr.debts, extra, custom, lump), fee: tr.fee };
+  }, [debts, whatIfActive, windOn, windAmt, windMonth, btOn, btFrom, btAmt, btFee, btPromoApr, btPromoMonths, btAfter, method, extra, custom]);
 
   const finite = runs.filter((r) => !r.result.hitHorizon);
   const cheapest = finite.length ? finite.reduce((a, b) => (b.result.totalInterest < a.result.totalInterest ? b : a)).method : null;
@@ -297,16 +326,85 @@ export function SimulatorPage() {
             </p>
           </Panel>
 
+          <Panel className="span-12" title="What if…" aside="try a windfall or a balance transfer on top of this plan">
+            <div className="grid-12" style={{ gap: 20 }}>
+              <div className="span-4">
+                <label style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14, fontWeight: 500, color: "var(--text-strong)", cursor: "pointer" }}>
+                  <input type="checkbox" checked={windOn} onChange={(e) => setWindOn(e.target.checked)} style={{ accentColor: "var(--accent)", width: 16, height: 16 }} />
+                  A one-off payment (windfall)
+                </label>
+                <p style={{ ...muted, fontSize: 12.5, marginTop: 6 }}>Tax refund, bonus, or something you sell. It goes straight to your focus debt.</p>
+                <div style={{ opacity: windOn ? 1 : 0.45, pointerEvents: windOn ? "auto" : "none", marginTop: 12 }}>
+                  <label style={fieldLabel}>Amount ($)</label>
+                  <input type="number" min={0} step={100} value={windAmt} onChange={(e) => setWindAmt(Number(e.target.value))} style={field} />
+                  <label style={{ ...fieldLabel, marginTop: 10 }}>When</label>
+                  <select value={windMonth} onChange={(e) => setWindMonth(Number(e.target.value))} style={field}>
+                    <option value={1}>Next month</option><option value={3}>In 3 months</option><option value={6}>In 6 months</option><option value={12}>In a year</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="span-4">
+                <label style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14, fontWeight: 500, color: "var(--text-strong)", cursor: cardDebts.length ? "pointer" : "not-allowed" }}>
+                  <input type="checkbox" disabled={!cardDebts.length} checked={btOn} onChange={(e) => setBtOn(e.target.checked)} style={{ accentColor: "var(--accent)", width: 16, height: 16 }} />
+                  A balance transfer
+                </label>
+                <p style={{ ...muted, fontSize: 12.5, marginTop: 6 }}>Move part of a card's balance to a new card with a promotional rate. The fee is added to what you owe.</p>
+                <div style={{ opacity: btOn ? 1 : 0.45, pointerEvents: btOn ? "auto" : "none", marginTop: 12 }}>
+                  <label style={fieldLabel}>Move from</label>
+                  <select value={btFrom} onChange={(e) => setBtFrom(e.target.value)} style={field}>
+                    {cardDebts.map((d) => <option key={d.id} value={d.id}>{d.name} ({money(d.balance)} at {d.apr.toFixed(1)}%)</option>)}
+                  </select>
+                  <label style={{ ...fieldLabel, marginTop: 10 }}>Amount to move ($)</label>
+                  <input type="number" min={0} step={100} value={btAmt} onChange={(e) => setBtAmt(Number(e.target.value))} style={field} />
+                </div>
+              </div>
+
+              <div className="span-4" style={{ opacity: btOn ? 1 : 0.45, pointerEvents: btOn ? "auto" : "none", paddingTop: 34 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  <div><label style={fieldLabel}>Transfer fee (%)</label><input type="number" min={0} step={0.5} value={btFee} onChange={(e) => setBtFee(Number(e.target.value))} style={field} /></div>
+                  <div><label style={fieldLabel}>Promo APR (%)</label><input type="number" min={0} step={0.5} value={btPromoApr} onChange={(e) => setBtPromoApr(Number(e.target.value))} style={field} /></div>
+                  <div><label style={fieldLabel}>Promo lasts (months)</label><input type="number" min={1} step={1} value={btPromoMonths} onChange={(e) => setBtPromoMonths(Number(e.target.value))} style={field} /></div>
+                  <div><label style={fieldLabel}>APR after promo (%)</label><input type="number" min={0} step={0.5} value={btAfter} onChange={(e) => setBtAfter(Number(e.target.value))} style={field} /></div>
+                </div>
+                <p style={{ ...muted, fontSize: 11.5, marginTop: 10 }}>You would need to be approved for a new card with enough limit. Check the offer's terms: fee, promo length and the rate after.</p>
+              </div>
+            </div>
+
+            {scenario && (
+              <div className="grid-12" style={{ gap: 14, marginTop: 20, paddingTop: 18, borderTop: "1px solid var(--glass-border)" }}>
+                {(() => {
+                  const dm = current.result.totalMonths - scenario.run.result.totalMonths;
+                  const interestSaved = current.result.totalInterest - scenario.run.result.totalInterest;
+                  const net = interestSaved - scenario.fee;
+                  const tile = (lbl: string, val: string, sub: string, tone: string) => (
+                    <div className="span-3 glass" style={{ padding: "14px 16px" }}>
+                      <p style={head}>{lbl}</p>
+                      <Numeral as="p" style={{ fontSize: 22, fontWeight: 600, marginTop: 6, color: tone }}>{val}</Numeral>
+                      <p style={{ ...muted, fontSize: 12, marginTop: 6 }}>{sub}</p>
+                    </div>
+                  );
+                  return (
+                    <>
+                      {tile("Debt-free", scenario.run.result.hitHorizon ? "never" : dateIn(scenario.run.result.totalMonths), dm > 0 ? `${monthsToText(dm)} sooner than the plan` : dm < 0 ? `${monthsToText(-dm)} later than the plan` : "same as the plan", dm > 0 ? "var(--positive)" : "var(--text-strong)")}
+                      {tile("Interest", money(scenario.run.result.totalInterest), `${interestSaved >= 0 ? "saves" : "costs"} ${money(Math.abs(interestSaved))} vs the plan`, "var(--attention)")}
+                      {scenario.fee > 0 && tile("Transfer fee", money(scenario.fee), "added to the new balance", "var(--text-strong)")}
+                      {tile("Net effect", `${net >= 0 ? "+" : "−"}${money(Math.abs(net))}`, net >= 0 ? "better off after fees" : "worse off after fees: not worth it", net >= 0 ? "var(--positive)" : "var(--attention)")}
+                    </>
+                  );
+                })()}
+              </div>
+            )}
+          </Panel>
+
           <div className="span-12">
-            <Panel title="Other ways to speed this up" aside="not modelled yet">
+            <Panel title="Other ways to speed this up" aside="not modelled">
               <div className="grid-12" style={{ gap: 16 }}>
                 {[
-                  ["Windfalls (snowflakes)", "Tax refund, bonus, sold item: one-off money straight onto the focus debt. Often the biggest single jump."],
-                  ["Balance transfer", "Move a high-APR card to a 0% promotional offer. Worth it only if the fee is small and you can pay it off before the promo ends."],
                   ["Consolidation loan", "One lower-rate fixed loan replaces several cards. It helps only if the rate is clearly lower and you stop running the cards back up."],
                   ["Negotiate the APR", "A call to your card issuer asking for a lower rate costs nothing and sometimes works, especially with a good payment history."],
                 ].map(([t, d]) => (
-                  <div key={t} className="span-3 glass" style={{ padding: "14px 16px" }}>
+                  <div key={t} className="span-6 glass" style={{ padding: "14px 16px" }}>
                     <p style={{ fontSize: 13.5, fontWeight: 500, color: "var(--text-strong)" }}>{t}</p>
                     <p style={{ ...muted, fontSize: 12.5, marginTop: 6 }}>{d}</p>
                   </div>
@@ -319,6 +417,12 @@ export function SimulatorPage() {
     </AppShell>
   );
 }
+
+const fieldLabel: React.CSSProperties = { fontSize: 12.5, color: "var(--text-muted)", display: "block", marginBottom: 5 };
+const field: React.CSSProperties = {
+  width: "100%", background: "var(--surface-input)", border: "1px solid var(--glass-border)", borderRadius: 8,
+  padding: "8px 10px", color: "var(--text-strong)", fontSize: 14,
+};
 
 const arrow: React.CSSProperties = {
   background: "rgba(255,255,255,0.06)", border: "1px solid var(--glass-border)", color: "var(--text-muted)",

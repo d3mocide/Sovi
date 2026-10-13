@@ -131,7 +131,42 @@ export interface MethodRun {
   firstWinMonth: number | null; // month the first debt is fully paid
 }
 
-export function run(method: MethodId, debts: PlanDebt[], extra: number, custom: string[]): MethodRun {
+export interface Windfall { amount: number; month: number }
+export interface Transfer {
+  fromId: string;
+  amount: number;
+  feePct: number; // one-off fee, added to the new balance
+  promoApr: number; // usually 0
+  promoMonths: number;
+  afterApr: number; // rate when the promo ends
+}
+
+/** Apply a balance transfer: shrink the source debt, add a new promo-rate debt (fee included). */
+export function applyTransfer(debts: PlanDebt[], t: Transfer): { debts: PlanDebt[]; fee: number } {
+  const src = debts.find((d) => d.id === t.fromId);
+  if (!src || t.amount <= 0) return { debts, fee: 0 };
+  const amount = Math.min(t.amount, src.balance);
+  const fee = (amount * t.feePct) / 100;
+  const newBalance = amount + fee;
+  const mk = (d: PlanDebt, balance: number): PlanDebt => {
+    const interest = (balance * d.debt.apr) / 1200;
+    const debt = { ...d.debt, balance };
+    return { ...d, balance, debt, minPayment: resolveMinPayment(debt, balance + interest, interest) };
+  };
+  const reduced = debts.map((d) => (d.id === src.id ? mk(d, src.balance - amount) : d)).filter((d) => d.balance > 0.01);
+  const debt: Debt = {
+    id: "balance-transfer", balance: newBalance, apr: t.afterApr, minPaymentType: "interest_plus_percent", minPaymentValue: 1, minPaymentFloor: 25,
+    promo: { apr: t.promoApr, months: t.promoMonths },
+  };
+  const interest = (newBalance * t.promoApr) / 1200;
+  const added: PlanDebt = {
+    id: debt.id, name: "New balance-transfer card", balance: newBalance, apr: t.afterApr, type: "credit_card", limit: null, debt,
+    minPayment: resolveMinPayment(debt, newBalance + interest, interest),
+  };
+  return { debts: [...reduced, added], fee };
+}
+
+export function run(method: MethodId, debts: PlanDebt[], extra: number, custom: string[], lumpSums: { month: number; amount: number }[] = []): MethodRun {
   const order = orderFor(method, debts, custom);
   const strategy = method === "avalanche" || method === "snowball" ? method : "custom";
   const result = simulate({
@@ -139,6 +174,7 @@ export function run(method: MethodId, debts: PlanDebt[], extra: number, custom: 
     extraMonthly: extra,
     strategy,
     customOrder: order,
+    lumpSums,
   });
   const months = result.debtResults.map((r) => r.payoffMonth).filter((m): m is number => m != null);
   return { method, order, result, firstWinMonth: months.length ? Math.min(...months) : null };
