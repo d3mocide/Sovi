@@ -30,7 +30,7 @@ class StatusResponse(BaseModel):
 
 class ManualAccountRequest(BaseModel):
     name: str
-    type: Literal["checking", "savings", "credit_card", "loan", "asset", "other"]
+    type: Literal["checking", "savings", "credit_card", "loan", "investment", "asset", "other"]
     currency: str = "USD"
     credit_limit: Decimal | None = None
     initial_balance: Decimal | None = None
@@ -50,8 +50,13 @@ class AccountResponse(BaseModel):
     has_debt_metadata: bool = False  # True if a debt_metadata row exists for this account
 
 
+class BalanceRequest(BaseModel):
+    """What the user sees on their statement: for a card or loan, the amount they owe."""
+    balance: Decimal
+
+
 class UpdateAccountRequest(BaseModel):
     name: str | None = None
-    type: Literal["checking", "savings", "credit_card", "loan", "asset", "other"] | None = None
+    type: Literal["checking", "savings", "credit_card", "loan", "investment", "asset", "other"] | None = None
     credit_limit: Decimal | None = None
     archived: bool | None = None

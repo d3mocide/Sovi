@@ -146,3 +146,12 @@ body {
   .credit-row { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
   .credit-row .c-bar { display: none; }
 }
+
+/* ---- Accounts rows ---- */
+.acct-row { display: grid; grid-template-columns: minmax(180px, 2fr) 1.2fr 1.6fr auto; gap: 16px; align-items: center; padding: 13px 2px; }
+.acct-row .c-bal { text-align: right; }
+@media (max-width: 860px) {
+  .acct-row { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "name bal" "util act"; row-gap: 10px; }
+  .acct-row .c-name { grid-area: name; } .acct-row .c-bal { grid-area: bal; }
+  .acct-row .c-util { grid-area: util; } .acct-row .c-act { grid-area: act; justify-self: end; }
+}

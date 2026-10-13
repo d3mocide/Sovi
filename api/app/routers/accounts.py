@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from app.money import to_signed
 from app.auth.session import get_current_user
 from app.database import get_db
-from app.models.simplefin import AccountResponse, ManualAccountRequest, UpdateAccountRequest
+from app.models.simplefin import AccountResponse, BalanceRequest, ManualAccountRequest, UpdateAccountRequest
 
 _STALE_MANUAL_DAYS = 30
 
@@ -55,10 +55,11 @@ async def create_manual_account(
         balance_date = datetime.now(tz=timezone.utc)
         await db.execute(
             """
-            INSERT INTO balance_snapshots (account_id, balance, balance_date)
-            VALUES ($1, $2, $3)
+            INSERT INTO balance_snapshots (account_id, user_id, balance, balance_date)
+            VALUES ($1, $2, $3, $4)
             """,
             account_id,
+            user_id,
             latest_balance,
             balance_date,
         )
@@ -216,6 +217,27 @@ async def get_account(
         ),
         has_debt_metadata=result["has_debt_metadata"],
     )
+
+
+@router.post("/{account_id}/balance", status_code=201)
+async def record_balance(
+    account_id: str,
+    body: BalanceRequest,
+    db: Annotated[asyncpg.Connection, Depends(get_db)],
+    user: Annotated[dict, Depends(get_current_user)],
+) -> dict:
+    """Record today's balance for an account (manual accounts, or to correct a synced one)."""
+    user_id = str(user["id"])
+    acct = await db.fetchrow("SELECT type FROM accounts WHERE id=$1 AND user_id=$2", account_id, user_id)
+    if acct is None:
+        raise HTTPException(status_code=404, detail="Account not found")
+    signed = to_signed(acct["type"], body.balance)
+    now = datetime.now(tz=timezone.utc)
+    await db.execute(
+        "INSERT INTO balance_snapshots (account_id, user_id, balance, balance_date) VALUES ($1, $2, $3, $4)",
+        account_id, user_id, signed, now,
+    )
+    return {"balance": str(signed), "balance_date": now.isoformat()}
 
 
 @router.put("/{account_id}", response_model=AccountResponse)
