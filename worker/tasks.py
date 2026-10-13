@@ -41,12 +41,12 @@ async def sync_all_users_job(ctx: dict) -> dict:
     return {"enqueued": enqueued}
 
 
-async def sure_sync_job(ctx: dict, user_id: str) -> dict:
+async def sure_sync_job(ctx: dict, user_id: str, force: bool = False) -> dict:
     """arq job: sync one user's data from Sure."""
     from worker.sure_sync import sync_user as sure_sync_user
     pool = ctx.get("pool") or await get_pool()
     async with pool.acquire() as db:
-        return await sure_sync_user(db, user_id)
+        return await sure_sync_user(db, user_id, force)
 
 
 async def sync_all_sure_job(ctx: dict) -> dict:

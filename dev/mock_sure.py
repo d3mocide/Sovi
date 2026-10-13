@@ -6,8 +6,10 @@ Run:  python dev/mock_sure.py [port]
 """
 from __future__ import annotations
 
+import io
 import json
 import random
+import zipfile
 import sys
 import uuid
 from datetime import date, datetime, timedelta, timezone
@@ -47,6 +49,31 @@ CATS = {
     "Entertainment": ("#c084fc", ["AMC Theatres", "Steam", "Ticketmaster"], (10, 120)),
 }
 SUBS = {"Netflix": 15.49, "Spotify": 11.99, "iCloud": 2.99, "Gym Membership": 39.0, "YouTube Premium": 13.99}
+
+
+# APR, minimum payment and available credit / loan terms per liability, as Sure stores them
+ACCOUNTABLE = {
+    "cc1": ("CreditCard", {"apr": "24.99", "minimum_payment": "63.0", "available_credit": "5850.0", "annual_fee": None}),
+    "cc2": ("CreditCard", {"apr": "29.99", "minimum_payment": "37.0", "available_credit": "1160.0", "annual_fee": None}),
+    "cc3": ("CreditCard", {"apr": "19.24", "minimum_payment": "25.0", "available_credit": "11380.0", "annual_fee": "95.0"}),
+    "car": ("Loan", {"interest_rate": "6.9", "term_months": 60, "start_date": "2024-03-01", "initial_balance": "21000.0", "rate_type": "fixed"}),
+}
+
+
+def export_zip() -> bytes:
+    lines = []
+    for a in ACCOUNTS:
+        kind, acc = ACCOUNTABLE.get(a[0], ("Depository", {}))
+        lines.append(json.dumps({"type": "Account", "data": {"id": uid(a[0]), "name": a[1], "accountable_type": kind, "accountable": acc}}))
+    lines.append(json.dumps({"type": "Balance", "data": {}}))
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("version.txt", "2")
+        z.writestr("all.ndjson", "\n".join(lines) + "\n")
+    return buf.getvalue()
+
+
+EXPORT_ID = str(uuid.uuid5(uuid.NAMESPACE_DNS, "mock-sure/export"))
 
 
 def build():
@@ -161,10 +188,26 @@ class H(BaseHTTPRequestHandler):
     def log_message(self, *a):  # quiet
         pass
 
-    def do_GET(self):
+    def do_POST(self):
         if self.headers.get("X-Api-Key") != KEY:
             return self.send(401, {"error": "unauthorized"})
+        if urlparse(self.path).path == "/api/v1/family_exports":
+            return self.send(202, {"id": EXPORT_ID, "status": "pending", "downloadable": False})
+        self.send(404, {"error": "not_found"})
+
+    def do_GET(self):
         u = urlparse(self.path); q = parse_qs(u.query)
+        if u.path == "/files/export.zip":  # signed file URL: no API key, like Active Storage
+            body = export_zip()
+            self.send_response(200); self.send_header("Content-Type", "application/zip")
+            self.send_header("Content-Length", str(len(body))); self.end_headers(); return self.wfile.write(body)
+        if self.headers.get("X-Api-Key") != KEY:
+            return self.send(401, {"error": "unauthorized"})
+        if u.path == f"/api/v1/family_exports/{EXPORT_ID}":
+            return self.send(200, {"id": EXPORT_ID, "status": "completed", "downloadable": True})
+        if u.path == f"/api/v1/family_exports/{EXPORT_ID}/download":
+            self.send_response(302); self.send_header("Location", "/files/export.zip")
+            self.send_header("Content-Length", "0"); self.end_headers(); return
         if u.path == "/api/v1/accounts":
             items, pg = page([account_json(a) for a in ACCOUNTS], q); return self.send(200, {"accounts": items, "pagination": pg})
         if u.path == "/api/v1/transactions":

@@ -11,6 +11,8 @@ interface SureStatus {
   status: string | null;
   last_sync_at: string | null;
   last_error: string | null;
+  details_synced_at: string | null;
+  details_note: string | null;
   account_count: number | null;
 }
 
@@ -106,6 +108,10 @@ export function SureConnection() {
           <p style={{ ...muted, marginTop: 6 }}>
             {status.account_count ?? 0} accounts · last sync {ago(status.last_sync_at)}
           </p>
+          <p style={{ ...muted, marginTop: 6 }}>
+            APR, minimum payments and limits: {status.details_synced_at ? `read from Sure ${ago(status.details_synced_at)}` : "not read yet"}
+          </p>
+          {status.details_note && <p style={{ ...muted, color: "var(--attention)", marginTop: 6 }}>{status.details_note}</p>}
           {status.last_error && <p style={{ ...muted, color: "var(--attention)", marginTop: 6 }}>{status.last_error}</p>}
           <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
             <Button size="sm" variant="secondary" onClick={syncNow} loading={busy}>
@@ -119,8 +125,9 @@ export function SureConnection() {
       ) : (
         <form onSubmit={connect} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <p style={muted}>
-            Pull accounts, balances and transactions from your Sure server. Use a read-only API key (Sure: Settings, API keys).
-            The key is stored encrypted and is only ever sent to Sure.
+            Pull accounts, balances and transactions from your Sure server. Use an API key with read_write scope from an admin
+            Sure user (Sure: Settings, API keys): Sovi only uses write to ask Sure for an export, which is the one place APR, minimum
+            payments and limits can be read. Sovi never changes your accounts in Sure. The key is stored encrypted and is only ever sent to Sure.
           </p>
           <Input label="Sure URL" placeholder="https://sure.example.com" value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} required />
           <Input label="API key" type="password" autoComplete="off" value={apiKey} onChange={(e) => setApiKey(e.target.value)} required />

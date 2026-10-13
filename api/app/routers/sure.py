@@ -27,6 +27,8 @@ class SureStatus(BaseModel):
     status: str | None = None
     last_sync_at: datetime | None = None
     last_error: str | None = None
+    details_synced_at: datetime | None = None
+    details_note: str | None = None
     account_count: int | None = None
 
 
@@ -48,7 +50,7 @@ async def connect(
         raise HTTPException(status_code=502, detail=str(exc))
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
-    await arq_redis.enqueue_job("sure_sync_job", user_id)
+    await arq_redis.enqueue_job("sure_sync_job", user_id, True)
     return SureStatus(connected=True, base_url=body.base_url.rstrip("/"), status="active", account_count=count)
 
 
@@ -58,12 +60,13 @@ async def status(
     user: Annotated[dict, Depends(get_current_user)],
 ) -> SureStatus:
     user_id = str(user["id"])
-    row = await db.fetchrow("SELECT base_url, status, last_sync_at, last_error FROM sure_credentials WHERE user_id=$1", user_id)
+    row = await db.fetchrow("SELECT base_url, status, last_sync_at, last_error, details_synced_at, details_note FROM sure_credentials WHERE user_id=$1", user_id)
     if row is None:
         return SureStatus(connected=False)
     n = await db.fetchval("SELECT count(*) FROM accounts WHERE user_id=$1 AND source='sure' AND archived=false", user_id)
     return SureStatus(connected=True, base_url=row["base_url"], status=row["status"],
-                      last_sync_at=row["last_sync_at"], last_error=row["last_error"], account_count=n)
+                      last_sync_at=row["last_sync_at"], last_error=row["last_error"],
+                      details_synced_at=row["details_synced_at"], details_note=row["details_note"], account_count=n)
 
 
 @router.post("/refresh", status_code=202)
@@ -76,7 +79,7 @@ async def refresh(
     row = await db.fetchrow("SELECT status FROM sure_credentials WHERE user_id=$1", user_id)
     if row is None:
         raise HTTPException(status_code=404, detail="Sure is not connected")
-    await arq_redis.enqueue_job("sure_sync_job", user_id)
+    await arq_redis.enqueue_job("sure_sync_job", user_id, True)
     return {"status": "queued"}
 
 
