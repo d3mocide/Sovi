@@ -14,7 +14,7 @@ sqlalchemy==2.0.35
 argon2-cffi==23.1.0
 python-multipart==0.0.32   # patches CVE-2024-53981 + 6 later multipart CVEs
 pyotp==2.9.0
-cryptography==49.0.0       # patches PYSEC-2026-35, CVE-2024-12797, CVE-2026-26007, GHSA-537c-gmf6-5ccf
+cryptography==50.0.0       # patches PYSEC-2026-35, CVE-2024-12797, CVE-2026-26007, GHSA-537c-gmf6-5ccf
 httpx==0.27.2
 python-dateutil==2.9.0
 pytest==9.0.3              # patches CVE-2025-71176
